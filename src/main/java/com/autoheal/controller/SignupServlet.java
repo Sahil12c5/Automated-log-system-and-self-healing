@@ -99,68 +99,6 @@ public class SignupServlet extends HttpServlet {
 
             if (domainId != null) {
                 auditLogDAO.logAction(orgId, userId, "DOMAIN_REGISTERED", "Default domain 'default.internal' added with API Key");
-
-                // Create default Auto-Healing rules for the new domain
-                try {
-                    com.autoheal.dao.AutoHealingRuleDAO ruleDAO = new com.autoheal.dao.AutoHealingRuleDAO();
-                    
-                    // 1. Redis Cache Error
-                    com.autoheal.model.AutoHealingRule ruleRedis = new com.autoheal.model.AutoHealingRule();
-                    ruleRedis.setDomainId(domainId);
-                    ruleRedis.setErrorPattern("RedisCacheException");
-                    ruleRedis.setActionType("CLEAR_CACHE");
-                    ruleRedis.setTargetScript("scripts/flush-redis-cache.sh");
-                    ruleRedis.setActive(true);
-                    ruleDAO.createRule(ruleRedis);
-
-                    // 2. Freeze Error
-                    com.autoheal.model.AutoHealingRule rule1 = new com.autoheal.model.AutoHealingRule();
-                    rule1.setDomainId(domainId);
-                    rule1.setErrorPattern("freeze");
-                    rule1.setActionType("RESTART_SERVICE");
-                    rule1.setTargetScript("npm restart");
-                    rule1.setActive(true);
-                    ruleDAO.createRule(rule1);
-
-                    // 3. CPU Lag Error
-                    com.autoheal.model.AutoHealingRule rule2 = new com.autoheal.model.AutoHealingRule();
-                    rule2.setDomainId(domainId);
-                    rule2.setErrorPattern("cpu lag");
-                    rule2.setActionType("RESTART_SERVICE");
-                    rule2.setTargetScript("pm2 restart app");
-                    rule2.setActive(true);
-                    ruleDAO.createRule(rule2);
-
-                    // 4. Memory Leak Error
-                    com.autoheal.model.AutoHealingRule rule3 = new com.autoheal.model.AutoHealingRule();
-                    rule3.setDomainId(domainId);
-                    rule3.setErrorPattern("memory leak");
-                    rule3.setActionType("CLEAR_CACHE");
-                    rule3.setTargetScript("echo \"Clearing cache & freeing memory\"");
-                    rule3.setActive(true);
-                    ruleDAO.createRule(rule3);
-
-                    // 5. Sync DB Error
-                    com.autoheal.model.AutoHealingRule rule4 = new com.autoheal.model.AutoHealingRule();
-                    rule4.setDomainId(domainId);
-                    rule4.setErrorPattern("CRITICAL: Synchronous database connection failed!");
-                    rule4.setActionType("RESET_CONNECTION");
-                    rule4.setTargetScript("echo \"Resetting DB Connections\"");
-                    rule4.setActive(true);
-                    ruleDAO.createRule(rule4);
-
-                    // 6. Async Gateway Error
-                    com.autoheal.model.AutoHealingRule rule5 = new com.autoheal.model.AutoHealingRule();
-                    rule5.setDomainId(domainId);
-                    rule5.setErrorPattern("FATAL: Unhandled Promise Rejection in payment gateway");
-                    rule5.setActionType("RESTART_SERVICE");
-                    rule5.setTargetScript("npm restart");
-                    rule5.setActive(true);
-                    ruleDAO.createRule(rule5);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
             }
 
             // Start Session

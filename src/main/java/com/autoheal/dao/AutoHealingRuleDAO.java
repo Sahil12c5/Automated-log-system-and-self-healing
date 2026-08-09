@@ -14,7 +14,7 @@ public class AutoHealingRuleDAO {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            stmt.setLong(1, rule.getDomainId());
+            stmt.setObject(1, rule.getDomainId(), Types.BIGINT);
             stmt.setString(2, rule.getErrorPattern());
             stmt.setString(3, rule.getActionType());
             stmt.setString(4, rule.getTargetScript());
@@ -33,7 +33,7 @@ public class AutoHealingRuleDAO {
 
     public List<AutoHealingRule> findActiveRulesByDomainId(Long domainId) throws SQLException {
         List<AutoHealingRule> rules = new ArrayList<>();
-        String sql = "SELECT id, domain_id, error_pattern, action_type, target_script, is_active, created_at FROM auto_healing_rules WHERE domain_id = ? AND is_active = 1 ORDER BY id DESC";
+        String sql = "SELECT id, domain_id, error_pattern, action_type, target_script, is_active, created_at FROM auto_healing_rules WHERE (domain_id = ? OR domain_id IS NULL) AND is_active = 1 ORDER BY id DESC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, domainId);
@@ -93,9 +93,10 @@ public class AutoHealingRuleDAO {
     }
 
     private AutoHealingRule extractRuleFromResultSet(ResultSet rs) throws SQLException {
+        Long domainId = (Long) rs.getObject("domain_id");
         return new AutoHealingRule(
             rs.getLong("id"),
-            rs.getLong("domain_id"),
+            domainId,
             rs.getString("error_pattern"),
             rs.getString("action_type"),
             rs.getString("target_script"),

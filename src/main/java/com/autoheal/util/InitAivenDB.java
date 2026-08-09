@@ -9,8 +9,8 @@ import java.nio.file.Paths;
 public class InitAivenDB {
     public static void main(String[] args) {
         String url = "jdbc:mysql://error-generator-sahilchavan-ff75.h.aivencloud.com:15953/defaultdb?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true";
-        String user = "avnadmin";
-        String pass = "REMOVED_FOR_SECURITY";
+        String user = System.getenv("DB_USER") != null ? System.getenv("DB_USER") : "avnadmin";
+        String pass = System.getenv("DB_PASS") != null ? System.getenv("DB_PASS") : "REMOVED_FOR_SECURITY";
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");

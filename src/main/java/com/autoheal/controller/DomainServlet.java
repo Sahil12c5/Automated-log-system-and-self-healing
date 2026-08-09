@@ -83,60 +83,6 @@ public class DomainServlet extends HttpServlet {
 
             auditLogDAO.logAction(user.getOrganizationId(), user.getId(), "DOMAIN_REGISTERED", "Domain '" + domainName + "' registered with new API key");
 
-            // Create default Auto-Healing rules for the new domain
-            try {
-                com.autoheal.dao.AutoHealingRuleDAO ruleDAO = new com.autoheal.dao.AutoHealingRuleDAO();
-                
-                // 1. Freeze Error
-                com.autoheal.model.AutoHealingRule rule1 = new com.autoheal.model.AutoHealingRule();
-                rule1.setDomainId(domainId);
-                rule1.setErrorPattern("freeze");
-                rule1.setActionType("RESTART_SERVICE");
-                rule1.setTargetScript("npm restart");
-                rule1.setActive(true);
-                ruleDAO.createRule(rule1);
-
-                // 2. CPU Lag Error
-                com.autoheal.model.AutoHealingRule rule2 = new com.autoheal.model.AutoHealingRule();
-                rule2.setDomainId(domainId);
-                rule2.setErrorPattern("cpu lag");
-                rule2.setActionType("RESTART_SERVICE");
-                rule2.setTargetScript("pm2 restart app");
-                rule2.setActive(true);
-                ruleDAO.createRule(rule2);
-
-                // 3. Memory Leak Error
-                com.autoheal.model.AutoHealingRule rule3 = new com.autoheal.model.AutoHealingRule();
-                rule3.setDomainId(domainId);
-                rule3.setErrorPattern("memory leak");
-                rule3.setActionType("CLEAR_CACHE");
-                rule3.setTargetScript("echo \"Clearing cache & freeing memory\"");
-                rule3.setActive(true);
-                ruleDAO.createRule(rule3);
-
-                // 4. Sync DB Error
-                com.autoheal.model.AutoHealingRule rule4 = new com.autoheal.model.AutoHealingRule();
-                rule4.setDomainId(domainId);
-                rule4.setErrorPattern("CRITICAL: Synchronous database connection failed!");
-                rule4.setActionType("RESET_CONNECTION");
-                rule4.setTargetScript("echo \"Resetting DB Connections\"");
-                rule4.setActive(true);
-                ruleDAO.createRule(rule4);
-
-                // 5. Async Gateway Error
-                com.autoheal.model.AutoHealingRule rule5 = new com.autoheal.model.AutoHealingRule();
-                rule5.setDomainId(domainId);
-                rule5.setErrorPattern("FATAL: Unhandled Promise Rejection in payment gateway");
-                rule5.setActionType("RESTART_SERVICE");
-                rule5.setTargetScript("npm restart");
-                rule5.setActive(true);
-                ruleDAO.createRule(rule5);
-
-            } catch (Exception e) {
-                // Log but don't fail domain creation if default rules fail
-                e.printStackTrace();
-            }
-
             JSONUtil.sendJsonResponse(resp, 200, true, "Domain '" + domainName + "' registered successfully!", domain);
 
         } catch (Exception e) {

@@ -83,7 +83,7 @@ CREATE TABLE `audit_logs` (
 -- 7. Auto Healing Rules Table (Phase 2)
 CREATE TABLE `auto_healing_rules` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `domain_id` BIGINT NOT NULL,
+    `domain_id` BIGINT NULL,
     `error_pattern` VARCHAR(255) NOT NULL,
     `action_type` ENUM('RESTART_SERVICE', 'CLEAR_CACHE', 'RESET_CONNECTION', 'CUSTOM_SCRIPT') NOT NULL,
     `target_script` VARCHAR(255) NOT NULL,
@@ -127,9 +127,11 @@ INSERT INTO `user_domain_scopes` (`user_id`, `domain_id`) VALUES (1, 1), (1, 2),
 
 INSERT INTO `auto_healing_rules` (`id`, `domain_id`, `error_pattern`, `action_type`, `target_script`, `is_active`)
 VALUES
-(1, 1, 'Connection pool exhausted', 'RESET_CONNECTION', 'scripts/reset-db-pool.sh', 1),
-(2, 1, 'OutOfMemoryError: Java heap space', 'RESTART_SERVICE', 'scripts/restart-app-service.sh', 1),
-(3, 2, 'RedisCacheException', 'CLEAR_CACHE', 'scripts/flush-redis-cache.sh', 1);
+(1, NULL, 'Connection pool exhausted', 'RESET_CONNECTION', 'echo "Resetting DB Connections"', 1),
+(2, NULL, 'memory leak', 'CLEAR_CACHE', 'echo "Clearing cache & freeing memory"', 1),
+(3, NULL, 'RedisCacheException', 'CLEAR_CACHE', 'scripts/flush-redis-cache.sh', 1),
+(4, NULL, 'freeze', 'RESTART_SERVICE', 'npm restart', 1),
+(5, NULL, 'cpu lag', 'RESTART_SERVICE', 'pm2 restart app', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES
