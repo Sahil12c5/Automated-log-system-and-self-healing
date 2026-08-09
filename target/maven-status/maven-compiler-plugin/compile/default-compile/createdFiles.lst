@@ -47,5 +47,6 @@ com\autoheal\dao\DomainDAO.class
 com\autoheal\dao\LogDAO.class
 com\autoheal\model\OTPVerification.class
 com\autoheal\controller\GuardrailSettingsServlet.class
+com\autoheal\util\InitAivenDB.class
 com\autoheal\controller\AgentDownloadServlet.class
 com\autoheal\controller\LoginServlet.class
