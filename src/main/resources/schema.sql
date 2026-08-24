@@ -131,7 +131,13 @@ VALUES
 (2, NULL, 'memory leak', 'CLEAR_CACHE', 'echo "Clearing cache & freeing memory"', 1),
 (3, NULL, 'RedisCacheException', 'CLEAR_CACHE', 'scripts/flush-redis-cache.sh', 1),
 (4, NULL, 'freeze', 'RESTART_SERVICE', 'npm restart', 1),
-(5, NULL, 'cpu lag', 'RESTART_SERVICE', 'pm2 restart app', 1);
+(5, NULL, 'cpu lag', 'RESTART_SERVICE', 'pm2 restart app', 1),
+(6, NULL, 'No space left on device', 'CUSTOM_SCRIPT', 'cleanup-storage.sh', 1),
+(7, NULL, '502 Bad Gateway', 'RESTART_SERVICE', 'pm2 restart backend-worker', 1),
+(8, NULL, 'EEXIST', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock', 1),
+(9, NULL, 'Too many open files', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
+(10, NULL, 'Defunct', 'CUSTOM_SCRIPT', 'pkill -9 -f defunct', 1),
+(11, NULL, 'Certificate Expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES
