@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,15 +33,42 @@
     <div class="auth-wrapper">
         <div class="auth-card">
             
-            <!-- Dual Tab Switcher -->
-            <div class="auth-nav-tabs">
-                <button type="button" class="auth-tab-btn active" data-tab="tabPasswordLogin">
-                    <i class="bi bi-shield-lock me-1"></i> Owner Password
-                </button>
-                <button type="button" class="auth-tab-btn" data-tab="tabOtpLogin">
-                    <i class="bi bi-phone-vibrate me-1"></i> Employee OTP
-                </button>
-            </div>
+            <c:choose>
+                <c:when test="${require2FA}">
+                    <!-- 2FA OTP Verification Form -->
+                    <div class="auth-tab-content">
+                        <div class="text-center mb-4">
+                            <h4 class="text-dark fw-bold">Two-Factor Authentication</h4>
+                            <p class="text-muted small">Please enter the 4-digit OTP sent to <strong><c:out value="${requestScope['2faEmail']}"/></strong></p>
+                        </div>
+                        <form action="${pageContext.request.contextPath}/login" method="POST" class="needs-validation" novalidate>
+                            <input type="hidden" name="authType" value="2fa_verify">
+                            
+                            <div class="mb-4">
+                                <label class="form-label-custom" for="otpCode2FA">4-Digit Security Code</label>
+                                <input type="text" class="form-control form-control-saas font-monospace text-center fs-4 letter-spacing-2" id="otpCode2FA" name="otpCode" maxlength="4" placeholder="••••" required>
+                                <div class="invalid-feedback">OTP code is required.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-saas-primary w-100 py-2.5">
+                                <i class="bi bi-shield-check me-1"></i> Verify &amp; Sign In
+                            </button>
+                        </form>
+                        <div class="text-center mt-3">
+                            <a href="${pageContext.request.contextPath}/login" class="text-muted small text-decoration-none">Cancel &amp; Back to Login</a>
+                        </div>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <!-- Dual Tab Switcher -->
+                    <div class="auth-nav-tabs">
+                        <button type="button" class="auth-tab-btn active" data-tab="tabPasswordLogin">
+                            <i class="bi bi-shield-lock me-1"></i> Owner Password
+                        </button>
+                        <button type="button" class="auth-tab-btn" data-tab="tabOtpLogin">
+                            <i class="bi bi-phone-vibrate me-1"></i> Employee OTP
+                        </button>
+                    </div>
 
             <!-- Error / Success Alert Banners -->
             <c:if test="${not empty error}">
@@ -123,6 +150,8 @@
                     </button>
                 </div>
             </div>
+                </c:otherwise>
+            </c:choose>
 
         </div>
     </div>

@@ -64,6 +64,11 @@ public class OTPServlet extends HttpServlet {
                 JSONUtil.sendJsonResponse(resp, 404, false, "No registered account found with email: " + email, null);
                 return;
             }
+            
+            if ("OWNER".equals(user.getRole())) {
+                JSONUtil.sendJsonResponse(resp, 403, false, "Owners must log in via the Owner Password tab.", null);
+                return;
+            }
 
             String otpCode = OTPUtil.generate4DigitOTP();
             otpDAO.saveOTP(email, otpCode, 10); // Expires in 10 minutes
@@ -103,6 +108,10 @@ public class OTPServlet extends HttpServlet {
 
             User user = userDAO.findByEmail(email);
             if (user != null) {
+                if ("OWNER".equals(user.getRole())) {
+                    JSONUtil.sendJsonResponse(resp, 403, false, "Owners must log in via the Owner Password tab.", null);
+                    return;
+                }
                 // Passwordless login session creation
                 Organization org = organizationDAO.findById(user.getOrganizationId());
                 HttpSession session = req.getSession(true);
