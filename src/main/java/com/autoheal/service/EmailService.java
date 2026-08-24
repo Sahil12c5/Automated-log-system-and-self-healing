@@ -5,6 +5,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 
 public class EmailService {
 
@@ -20,6 +21,11 @@ public class EmailService {
                 System.err.println("Warning: email.properties not found in classpath.");
             }
             
+            // Add timeouts to prevent infinite hanging
+            mailProps.put("mail.smtp.connectiontimeout", "10000");
+            mailProps.put("mail.smtp.timeout", "10000");
+            mailProps.put("mail.smtp.writetimeout", "10000");
+            
             // Prioritize environment variables (for Render deployment) over properties file
             fromEmail = System.getenv("MAIL_USER");
             if (fromEmail == null || fromEmail.trim().isEmpty()) {
@@ -34,6 +40,17 @@ public class EmailService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static void sendOTPEmailAsync(String toEmail, String otpCode) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                sendOTPEmail(toEmail, otpCode);
+            } catch (Exception e) {
+                System.err.println("Failed to send async OTP to " + toEmail + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
 
     public static void sendOTPEmail(String toEmail, String otpCode) throws Exception {

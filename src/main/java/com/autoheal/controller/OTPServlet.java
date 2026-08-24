@@ -73,8 +73,8 @@ public class OTPServlet extends HttpServlet {
             String otpCode = OTPUtil.generate4DigitOTP();
             otpDAO.saveOTP(email, otpCode, 10); // Expires in 10 minutes
 
-            // Dispatch REAL email via SMTP
-            com.autoheal.service.EmailService.sendOTPEmail(email, otpCode);
+            // Dispatch REAL email via SMTP asynchronously
+            com.autoheal.service.EmailService.sendOTPEmailAsync(email, otpCode);
 
             Map<String, Object> data = new HashMap<>();
             data.put("email", email);

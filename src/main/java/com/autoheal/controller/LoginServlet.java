@@ -76,7 +76,7 @@ public class LoginServlet extends HttpServlet {
                     // Trigger 2FA for Owner
                     String otpCode = OTPUtil.generate4DigitOTP();
                     otpDAO.saveOTP(user.getEmail(), otpCode, 10);
-                    EmailService.sendOTPEmail(user.getEmail(), otpCode);
+                    EmailService.sendOTPEmailAsync(user.getEmail(), otpCode);
                     
                     HttpSession session = req.getSession(true);
                     session.setAttribute("pending2FA_email", user.getEmail());
