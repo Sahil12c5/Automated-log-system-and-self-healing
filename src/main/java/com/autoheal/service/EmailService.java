@@ -16,11 +16,21 @@ public class EmailService {
         try (InputStream input = EmailService.class.getClassLoader().getResourceAsStream("email.properties")) {
             if (input != null) {
                 mailProps.load(input);
-                fromEmail = mailProps.getProperty("mail.user");
-                password = mailProps.getProperty("mail.password");
             } else {
                 System.err.println("Warning: email.properties not found in classpath.");
             }
+            
+            // Prioritize environment variables (for Render deployment) over properties file
+            fromEmail = System.getenv("MAIL_USER");
+            if (fromEmail == null || fromEmail.trim().isEmpty()) {
+                fromEmail = mailProps.getProperty("mail.user");
+            }
+            
+            password = System.getenv("MAIL_PASSWORD");
+            if (password == null || password.trim().isEmpty()) {
+                password = mailProps.getProperty("mail.password");
+            }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
