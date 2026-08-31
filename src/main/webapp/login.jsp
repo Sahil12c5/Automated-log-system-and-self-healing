@@ -43,6 +43,7 @@
                         </div>
                         <form action="${pageContext.request.contextPath}/login" method="POST" class="needs-validation" novalidate>
                             <input type="hidden" name="authType" value="2fa_verify">
+                            <input type="hidden" name="email" value="<c:out value="${requestScope['2faEmail']}"/>">
                             
                             <div class="mb-4">
                                 <label class="form-label-custom" for="otpCode2FA">4-Digit Security Code</label>
