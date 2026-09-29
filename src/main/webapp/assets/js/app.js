@@ -1,16 +1,50 @@
 /* ============================================================================
-   Automated Log System & Self-Healing Platform - Vanilla JS Application Logic
+   AutoHeal Engine - Unified Client-Side Application Logic & Interactivity
    ============================================================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initPasswordStrengthMeter();
+    initPasswordToggles();
     initCopyButtons();
     initApiKeyMaskToggles();
     initTabSwitches();
     initOTPHandlers();
     initDomainForm();
     initFormValidation();
+    initQuickSearchFilters();
 });
+
+/**
+ * Theme Management (Dark / Light Mode with LocalStorage persistence)
+ */
+function initTheme() {
+    const savedTheme = localStorage.getItem('autoheal_theme') || 'dark';
+    applyTheme(savedTheme);
+
+    document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('autoheal_theme', newTheme);
+            showToast(`Switched to ${newTheme === 'dark' ? 'Dark' : 'Light'} Mode`, 'info');
+        });
+    });
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
+        if (theme === 'dark') {
+            btn.innerHTML = '<i class="bi bi-sun-fill text-warning"></i>';
+            btn.setAttribute('title', 'Switch to Light Mode');
+        } else {
+            btn.innerHTML = '<i class="bi bi-moon-stars-fill text-primary"></i>';
+            btn.setAttribute('title', 'Switch to Dark Mode');
+        }
+    });
+}
 
 /**
  * Toast Notification System
@@ -29,11 +63,12 @@ function showToast(message, type = 'info') {
     let iconClass = 'bi-info-circle-fill text-info';
     if (type === 'success') iconClass = 'bi-check-circle-fill text-success';
     if (type === 'danger' || type === 'error') iconClass = 'bi-exclamation-triangle-fill text-danger';
+    if (type === 'warning') iconClass = 'bi-exclamation-circle-fill text-warning';
 
     toast.innerHTML = `
         <i class="bi ${iconClass} fs-5"></i>
         <div class="flex-grow-1 font-size-sm">${message}</div>
-        <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.remove()"></button>
+        <button type="button" class="btn-close ${document.documentElement.getAttribute('data-theme') === 'dark' ? 'btn-close-white' : ''} ms-2" onclick="this.parentElement.remove()"></button>
     `;
 
     container.appendChild(toast);
@@ -41,14 +76,37 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         if (toast.parentElement) {
             toast.style.opacity = '0';
-            toast.style.transition = 'opacity 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.35s ease';
+            setTimeout(() => toast.remove(), 350);
         }
-    }, 4000);
+    }, 4500);
 }
 
 /**
- * Real-time Password Strength Meter
+ * Password Visibility Toggle
+ */
+function initPasswordToggles() {
+    document.querySelectorAll('.btn-toggle-password').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const targetInput = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (targetInput) {
+                if (targetInput.type === 'password') {
+                    targetInput.type = 'text';
+                    if (icon) icon.className = 'bi bi-eye-slash';
+                } else {
+                    targetInput.type = 'password';
+                    if (icon) icon.className = 'bi bi-eye';
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Real-time Password Strength Meter with Dynamic Checklist
  */
 function initPasswordStrengthMeter() {
     const passwordInput = document.getElementById('signupPassword');
@@ -68,45 +126,55 @@ function initPasswordStrengthMeter() {
 
         bar.style.width = score + '%';
 
-        if (score <= 25) {
+        if (score === 0) {
+            bar.style.backgroundColor = 'transparent';
+            if (text) text.innerText = 'Min. 8 characters';
+        } else if (score <= 25) {
             bar.style.backgroundColor = '#ef4444';
-            if (text) text.innerText = 'Weak password';
+            if (text) text.innerHTML = '<span class="text-danger fw-semibold">Weak password</span> (add uppercase & numbers)';
         } else if (score <= 75) {
             bar.style.backgroundColor = '#f59e0b';
-            if (text) text.innerText = 'Moderate password';
+            if (text) text.innerHTML = '<span class="text-warning fw-semibold">Moderate password</span> (add special characters)';
         } else {
             bar.style.backgroundColor = '#10b981';
-            if (text) text.innerText = 'Strong password';
+            if (text) text.innerHTML = '<span class="text-success fw-semibold">Strong password</span> (BCrypt ready)';
         }
     });
 }
 
 /**
- * One-Click Copy to Clipboard for API Keys
+ * One-Click Copy to Clipboard for API Keys & Commands
  */
 function initCopyButtons() {
     document.querySelectorAll('.btn-copy-key').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const keyText = btn.getAttribute('data-key');
             if (keyText) {
-                navigator.clipboard.writeText(keyText).then(() => {
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = `<i class="bi bi-check2 text-success"></i> Copied!`;
-                    btn.classList.add('btn-outline-success');
-                    btn.classList.remove('btn-saas-outline');
-                    
-                    showToast('API Key copied to clipboard!', 'success');
-
-                    setTimeout(() => {
-                        btn.innerHTML = originalHTML;
-                        btn.classList.remove('btn-outline-success');
-                        btn.classList.add('btn-saas-outline');
-                    }, 2000);
-                }).catch(err => {
-                    showToast('Failed to copy API key: ' + err, 'danger');
-                });
+                copyTextToClipboard(keyText, btn, 'API Key copied to clipboard!');
             }
         });
+    });
+}
+
+function copyToClipboard(elementId) {
+    const elem = document.getElementById(elementId);
+    if (elem) {
+        copyTextToClipboard(elem.innerText.trim(), null, 'Copied command to clipboard!');
+    }
+}
+
+function copyTextToClipboard(text, btnElement, successMsg) {
+    navigator.clipboard.writeText(text).then(() => {
+        if (btnElement) {
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = `<i class="bi bi-check2 text-success"></i> Copied!`;
+            setTimeout(() => {
+                btnElement.innerHTML = originalHTML;
+            }, 2000);
+        }
+        showToast(successMsg || 'Copied to clipboard!', 'success');
+    }).catch(err => {
+        showToast('Failed to copy: ' + err, 'danger');
     });
 }
 
@@ -165,7 +233,6 @@ function initTabSwitches() {
  * OTP Request & Verification Handlers
  */
 function initOTPHandlers() {
-    // Send OTP button for Employee Passwordless Login
     const btnSendOtp = document.getElementById('btnSendEmpOtp');
     if (btnSendOtp) {
         btnSendOtp.addEventListener('click', () => {
@@ -192,10 +259,10 @@ function initOTPHandlers() {
 
                 if (data.success) {
                     showToast("Please check your email inbox for the OTP code.", 'success');
-
-
                     const otpSection = document.getElementById('empOtpVerifySection');
                     if (otpSection) otpSection.classList.remove('d-none');
+                    const otpInput = document.getElementById('empOtpCode');
+                    if (otpInput) otpInput.focus();
                 } else {
                     showToast(data.message, 'danger');
                 }
@@ -208,7 +275,6 @@ function initOTPHandlers() {
         });
     }
 
-    // Verify OTP Button
     const btnVerifyOtp = document.getElementById('btnVerifyEmpOtp');
     if (btnVerifyOtp) {
         btnVerifyOtp.addEventListener('click', () => {
@@ -297,7 +363,6 @@ function initDomainForm() {
 
             if (data.success) {
                 showToast(data.message, 'success');
-                // Close modal
                 const modalElem = document.getElementById('addDomainModal');
                 if (modalElem) {
                     const modal = bootstrap.Modal.getInstance(modalElem);
@@ -350,13 +415,27 @@ function validateEmail(email) {
 }
 
 /**
+ * Universal Client-Side Search & Filter for Tables
+ */
+function initQuickSearchFilters() {
+    const tableSearchInput = document.getElementById('tableSearchInput');
+    if (tableSearchInput) {
+        tableSearchInput.addEventListener('input', () => {
+            const query = tableSearchInput.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.table-saas tbody tr, .table tbody tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+}
+
+/**
  * Bootstrap HTML5 Client-Side Form Validation
  */
 function initFormValidation() {
-    // Fetch all the forms we want to apply custom Bootstrap validation styles to
     const forms = document.querySelectorAll('.needs-validation');
-
-    // Loop over them and prevent submission
     Array.from(forms).forEach(form => {
         form.addEventListener('submit', event => {
             if (!form.checkValidity()) {
