@@ -144,7 +144,12 @@ VALUES
 (15, NULL, 'STORAGE_CRITICAL', 'CUSTOM_SCRIPT', 'sh scripts/clear-disk-cache.sh', 1),
 (16, NULL, 'EMFILE', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
 (17, NULL, 'OS_RESOURCE_LIMIT', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
-(18, NULL, 'FILESYSTEM_CONFLICT', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock /var/run/*.pid', 1);
+(18, NULL, 'FILESYSTEM_CONFLICT', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock /var/run/*.pid', 1),
+(19, NULL, 'CERT_HAS_EXPIRED', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
+(20, NULL, 'certificate has expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
+(21, NULL, 'TLSError', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
+(22, NULL, 'ProcessZombieException', 'CUSTOM_SCRIPT', 'pkill -9 -f defunct', 1),
+(23, NULL, 'GATEWAY_ERROR', 'RESTART_SERVICE', 'pm2 restart backend-worker', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES

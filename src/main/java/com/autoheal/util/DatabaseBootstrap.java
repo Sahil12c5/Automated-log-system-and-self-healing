@@ -20,24 +20,72 @@ public class DatabaseBootstrap {
     private static volatile boolean bootstrapped = false;
 
     private static final String[][] DEFAULT_RULES = {
+        // 1. Database connection pool
         {"Connection pool exhausted", "RESET_CONNECTION", "echo \"Resetting DB Connections\""},
+        {"ERR_DB_POOL_EXHAUSTED", "RESET_CONNECTION", "echo \"Resetting DB Connections\""},
+        {"DATABASE_ERROR", "RESET_CONNECTION", "echo \"Resetting DB Connections\""},
+
+        // 2. Memory leak
         {"memory leak", "CLEAR_CACHE", "echo \"Clearing cache & freeing memory\""},
+        {"OutOfMemoryError", "CLEAR_CACHE", "echo \"Clearing cache & freeing memory\""},
+        {"ERR_HEAP_EXHAUSTED", "CLEAR_CACHE", "echo \"Clearing cache & freeing memory\""},
+        {"MEMORY_LEAK", "CLEAR_CACHE", "echo \"Clearing cache & freeing memory\""},
+
+        // 3. Redis cache
         {"RedisCacheException", "CLEAR_CACHE", "scripts/flush-redis-cache.sh"},
+        {"ERR_REDIS_CONNECTION_REFUSED", "CLEAR_CACHE", "scripts/flush-redis-cache.sh"},
+        {"CACHE_ERROR", "CLEAR_CACHE", "scripts/flush-redis-cache.sh"},
+
+        // 4. Server freeze / deadlock
         {"freeze", "RESTART_SERVICE", "npm restart"},
         {"ServerThreadFrozen", "RESTART_SERVICE", "npm restart"},
         {"frozen", "RESTART_SERVICE", "npm restart"},
+        {"ERR_EVENT_LOOP_DEADLOCK", "RESTART_SERVICE", "npm restart"},
+
+        // 5. CPU lag / Event loop blocked
         {"cpu lag", "RESTART_SERVICE", "pm2 restart app"},
-        {"502 Bad Gateway", "RESTART_SERVICE", "pm2 restart backend-worker"},
-        {"Defunct", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
-        {"Certificate Expired", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"EventLoopBlocked", "RESTART_SERVICE", "pm2 restart app"},
+        {"ERR_CPU_STARVATION", "RESTART_SERVICE", "pm2 restart app"},
+        {"COMPUTE_SPIKE", "RESTART_SERVICE", "pm2 restart app"},
+
+        // 6. Disk space / ENOSPC
         {"No space left on device", "CUSTOM_SCRIPT", "sh scripts/clear-disk-cache.sh"},
         {"ENOSPC", "CUSTOM_SCRIPT", "sh scripts/clear-disk-cache.sh"},
         {"STORAGE_CRITICAL", "CUSTOM_SCRIPT", "sh scripts/clear-disk-cache.sh"},
+        {"DiskSpaceExhaustionError", "CUSTOM_SCRIPT", "sh scripts/clear-disk-cache.sh"},
+
+        // 7. Gateway 502
+        {"502 Bad Gateway", "RESTART_SERVICE", "pm2 restart backend-worker"},
+        {"GATEWAY_ERROR", "RESTART_SERVICE", "pm2 restart backend-worker"},
+        {"ERR_BAD_GATEWAY", "RESTART_SERVICE", "pm2 restart backend-worker"},
+        {"BadGatewayError", "RESTART_SERVICE", "pm2 restart backend-worker"},
+
+        // 8. EEXIST / Lockfile conflict
         {"EEXIST", "CUSTOM_SCRIPT", "rm -f /tmp/*.lock /var/run/*.pid"},
+        {"file already exists", "CUSTOM_SCRIPT", "rm -f /tmp/*.lock /var/run/*.pid"},
         {"FILESYSTEM_CONFLICT", "CUSTOM_SCRIPT", "rm -f /tmp/*.lock /var/run/*.pid"},
+        {"FileExistsConflict", "CUSTOM_SCRIPT", "rm -f /tmp/*.lock /var/run/*.pid"},
+
+        // 9. EMFILE / Too many open files
         {"Too many open files", "CUSTOM_SCRIPT", "ulimit -n 65535 && pm2 reload all"},
         {"EMFILE", "CUSTOM_SCRIPT", "ulimit -n 65535 && pm2 reload all"},
-        {"OS_RESOURCE_LIMIT", "CUSTOM_SCRIPT", "ulimit -n 65535 && pm2 reload all"}
+        {"OS_RESOURCE_LIMIT", "CUSTOM_SCRIPT", "ulimit -n 65535 && pm2 reload all"},
+        {"TooManyOpenFilesError", "CUSTOM_SCRIPT", "ulimit -n 65535 && pm2 reload all"},
+
+        // 10. Zombie / Defunct process
+        {"Defunct", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
+        {"defunct", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
+        {"ProcessZombieException", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
+        {"PROCESS_CRITICAL", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
+        {"ERR_PROCESS_DEFUNCT", "CUSTOM_SCRIPT", "pkill -9 -f defunct"},
+
+        // 11. SSL / TLS Certificate Expired
+        {"Certificate Expired", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"certificate has expired", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"CERT_HAS_EXPIRED", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"TLSError", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"SECURITY_ALERT", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"},
+        {"CertificateExpiredError", "CUSTOM_SCRIPT", "certbot renew && systemctl reload nginx"}
     };
 
     public static synchronized void bootstrap(DataSource dataSource) {
