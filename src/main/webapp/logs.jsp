@@ -21,6 +21,44 @@
             0% { background-color: rgba(99, 102, 241, 0.25); }
             100% { background-color: transparent; }
         }
+
+        /* Terminal Window High-Contrast Overrides */
+        .terminal-window {
+            background: #0b0f19 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            color: #f1f5f9 !important;
+        }
+        .terminal-window .terminal-header {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        .terminal-window .terminal-title,
+        .terminal-window .table-saas th {
+            color: #94a3b8 !important;
+        }
+        .terminal-window #logCountDisplay {
+            color: #cbd5e1 !important;
+        }
+        .terminal-window .table-saas td {
+            color: #f1f5f9 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+        }
+        .terminal-window .log-timestamp-cell {
+            color: #94a3b8 !important;
+        }
+        .terminal-window .log-message-cell {
+            color: #f8fafc !important;
+        }
+        .terminal-window .btn-saas-outline {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        .terminal-window .btn-saas-outline:hover {
+            background: rgba(255, 255, 255, 0.16) !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.35) !important;
+        }
     </style>
 </head>
 <body>
@@ -215,8 +253,8 @@
                             <c:when test="${not empty logs}">
                                 <c:forEach var="log" items="${logs}">
                                     <tr data-id="${log.id}" data-domain="<c:out value="${log.domainName}" />" data-level="${log.logLevel}" data-status="${log.status}">
-                                        <td class="font-monospace small text-muted text-nowrap">
-                                            <fmt:formatDate value="${log.createdAt}" pattern="HH:mm:ss.SSS" />
+                                        <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">
+                                            <fmt:formatDate value="${log.createdAt}" pattern="yyyy-MM-dd HH:mm:ss" />
                                         </td>
                                         <td>
                                             <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
@@ -239,7 +277,7 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <td class="font-monospace small text-wrap" style="max-width: 420px; color: var(--text-main);">
+                                        <td class="font-monospace small text-wrap log-message-cell" style="max-width: 420px; color: #f8fafc !important;">
                                             <c:out value="${log.message}" />
                                         </td>
                                         <td>
@@ -525,7 +563,13 @@
                 const d = (typeof dateVal === 'number') ? new Date(dateVal) : new Date(String(dateVal));
                 if (isNaN(d.getTime())) return String(dateVal);
                 const pad = (n, s = 2) => String(n).padStart(s, '0');
-                return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+                const year = d.getFullYear();
+                const month = pad(d.getMonth() + 1);
+                const day = pad(d.getDate());
+                const hours = pad(d.getHours());
+                const minutes = pad(d.getMinutes());
+                const seconds = pad(d.getSeconds());
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
             } catch (e) {
                 return String(dateVal);
             }
@@ -581,14 +625,14 @@
 
             return `
                 <tr data-id="${log.id}" data-domain="${domain}" data-level="${level}" data-status="${status}" class="${newClass}">
-                    <td class="font-monospace small text-muted text-nowrap">${timeFormatted}</td>
+                    <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">${timeFormatted}</td>
                     <td>
                         <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
                             ${domain}
                         </span>
                     </td>
                     <td>${levelBadge}</td>
-                    <td class="font-monospace small text-wrap" style="max-width: 420px; color: var(--text-main);">${message}</td>
+                    <td class="font-monospace small text-wrap log-message-cell" style="max-width: 420px; color: #f8fafc !important;">${message}</td>
                     <td>${statusBadge}</td>
                     <td>${actionHtml}</td>
                     <td class="text-end">${traceHtml}</td>

@@ -518,18 +518,19 @@ p, span, div, td, th, li {
 
 /* High-Tech Terminal Window */
 .terminal-window {
-    background: var(--bg-terminal);
-    border: 1px solid var(--border-color);
+    background: #0b0f19;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-md);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
     overflow: hidden;
     font-family: var(--font-mono);
+    color: #f1f5f9;
 }
 
-.terminal-header {
-    background: rgba(255, 255, 255, 0.03);
+.terminal-window .terminal-header {
+    background: rgba(255, 255, 255, 0.04);
     padding: 0.65rem 1.25rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -552,10 +553,53 @@ p, span, div, td, th, li {
 .terminal-dot.dot-yellow { background: #f59e0b; }
 .terminal-dot.dot-green { background: #10b981; }
 
-.terminal-title {
-    color: var(--text-muted);
+.terminal-window .terminal-title {
+    color: #94a3b8;
     font-size: 0.8rem;
     letter-spacing: 0.04em;
+}
+
+.terminal-window #logCountDisplay {
+    color: #cbd5e1;
+}
+
+.terminal-window .table-saas {
+    color: #f1f5f9;
+}
+
+.terminal-window .table-saas th {
+    background: rgba(255, 255, 255, 0.03);
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.terminal-window .table-saas td {
+    color: #f1f5f9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.terminal-window .table-saas tr:hover td {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-window .log-timestamp-cell {
+    color: #94a3b8 !important;
+}
+
+.terminal-window .log-message-cell {
+    color: #f8fafc !important;
+}
+
+.terminal-window .btn-saas-outline {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0 !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.terminal-window .btn-saas-outline:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .terminal-body {
