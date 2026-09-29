@@ -16,10 +16,64 @@
     <style>
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .spin-animation { display: inline-block; animation: spin 0.75s linear infinite; }
-        .log-row-new { animation: logRowHighlight 2.5s ease-out; }
+        
+        /* Dynamic New Log Row Highlight */
+        .log-row-new { animation: logRowHighlight 3.5s ease-out; }
         @keyframes logRowHighlight {
-            0% { background-color: rgba(99, 102, 241, 0.25); }
-            100% { background-color: transparent; }
+            0% {
+                background-color: rgba(99, 102, 241, 0.45) !important;
+                box-shadow: inset 0 0 15px rgba(99, 102, 241, 0.5);
+            }
+            40% {
+                background-color: rgba(99, 102, 241, 0.2) !important;
+            }
+            100% {
+                background-color: transparent !important;
+            }
+        }
+
+        /* Pulse Indicator */
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulseGlow 1.8s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.15); box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Live Toast Floating Notifications */
+        #liveToastContainer {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 10050;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .live-incident-toast {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(99, 102, 241, 0.2);
+            overflow: hidden;
+            animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            color: #f8fafc;
+        }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateX(50px) scale(0.95); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
         }
 
         /* Terminal Window High-Contrast Overrides */
@@ -62,6 +116,8 @@
     </style>
 </head>
 <body>
+    <!-- Real-time Floating Incident Toast Notifications Container -->
+    <div id="liveToastContainer" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Top Dashboard Navbar -->
     <nav class="navbar navbar-saas">
@@ -228,7 +284,14 @@
                     <span class="terminal-title ms-2"><i class="bi bi-terminal me-1"></i> autoheal-log-stream.log</span>
                 </div>
                 <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-pill" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <span class="pulse-dot"></span>
+                        <span class="font-monospace small fw-bold" id="streamStatusBadge" style="font-size: 0.72rem; color: #34d399;">LIVE STREAMING</span>
+                    </div>
                     <span class="text-muted small font-monospace" id="logCountDisplay">Showing ${logs.size()} entries</span>
+                    <button class="btn btn-sm btn-saas-outline py-0 px-2" id="btnToggleSound" onclick="toggleSoundAlert()" title="Notification Audio Enabled">
+                        <i class="bi bi-volume-up text-info" id="soundIcon"></i>
+                    </button>
                     <button class="btn btn-sm btn-saas-outline py-0 px-2" onclick="refreshLogsManually()" id="btnManualRefresh" title="Refresh Live Logs">
                         <i class="bi bi-arrow-clockwise" id="manualRefreshIcon"></i>
                     </button>
@@ -540,12 +603,108 @@
             });
         });
 
+        // Audio Alert Chime using Web Audio API (No external assets required)
+        let soundAlertEnabled = true;
+        function toggleSoundAlert() {
+            soundAlertEnabled = !soundAlertEnabled;
+            const btn = document.getElementById('btnToggleSound');
+            const icon = document.getElementById('soundIcon');
+            if (btn && icon) {
+                if (soundAlertEnabled) {
+                    icon.className = 'bi bi-volume-up text-info';
+                    btn.title = 'Notification Audio Enabled';
+                } else {
+                    icon.className = 'bi bi-volume-mute text-muted';
+                    btn.title = 'Notification Audio Muted';
+                }
+            }
+        }
+
+        function playLiveAlertSound() {
+            if (!soundAlertEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch (e) {
+                // AudioContext not allowed before user interaction in some browsers
+            }
+        }
+
+        // Real-Time Incident Toast Notification
+        function showIncidentToast(log) {
+            const container = document.getElementById('liveToastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'live-incident-toast p-3';
+
+            const level = (log.logLevel || 'INFO').toUpperCase();
+            const status = (log.status || 'PENDING').toUpperCase();
+            let levelBadgeClass = 'bg-info text-dark';
+            if (level === 'CRITICAL' || level === 'ERROR') levelBadgeClass = 'bg-danger text-white';
+            else if (level === 'WARN') levelBadgeClass = 'bg-warning text-dark';
+
+            let statusBadge = '';
+            if (status === 'AUTO_HEALED') {
+                statusBadge = '<span class="badge" style="background:#064e3b; color:#34d399; border:1px solid #059669;"><i class="bi bi-check-all me-1"></i>AUTO_HEALED</span>';
+            } else if (status === 'LOOP_DETECTED') {
+                statusBadge = '<span class="badge bg-danger text-white"><i class="bi bi-shield-slash me-1"></i>LOOP_DETECTED</span>';
+            } else if (status === 'SECURITY_BLOCKED') {
+                statusBadge = '<span class="badge bg-danger text-white"><i class="bi bi-shield-x me-1"></i>BLOCKED</span>';
+            } else {
+                statusBadge = `<span class="badge bg-warning text-dark">${escapeHtml(status)}</span>`;
+            }
+
+            const timeStr = formatLogTime(log.createdAt);
+
+            toast.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${levelBadgeClass} fw-bold">${level}</span>
+                        <strong class="text-white small">${escapeHtml(log.domainName || 'Domain')}</strong>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white small ms-2" onclick="this.closest('.live-incident-toast').remove()"></button>
+                </div>
+                <div class="text-light font-monospace small text-truncate my-1" title="${escapeHtml(log.message || '')}">
+                    ${escapeHtml(log.message || '')}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-secondary border-opacity-25">
+                    <div>${statusBadge}</div>
+                    <small class="text-muted font-monospace" style="font-size:0.7rem;">${timeStr}</small>
+                </div>
+                ${log.executedAction ? `<div class="mt-1 small font-monospace text-success text-truncate" style="font-size:0.72rem;"><i class="bi bi-lightning-charge me-1"></i>${escapeHtml(log.executedAction)}</div>` : ''}
+            `;
+
+            container.prepend(toast);
+
+            // Auto-remove after 7 seconds
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 7000);
+        }
+
         // Track known log IDs to highlight brand new logs
         const knownLogIds = new Set();
+        let isInitialLoad = true;
+
         document.querySelectorAll('#logsTableBody tr[data-id]').forEach(r => {
             const id = r.getAttribute('data-id');
-            if (id) knownLogIds.add(id);
+            if (id) knownLogIds.add(String(id));
         });
+        setTimeout(() => { isInitialLoad = false; }, 800);
 
         function escapeHtml(text) {
             if (!text) return '';
@@ -660,12 +819,27 @@
                 return;
             }
 
+            let newlyArrivedCount = 0;
             const html = logs.map(log => {
                 const logIdStr = String(log.id);
                 const isNew = !knownLogIds.has(logIdStr);
-                if (isNew) knownLogIds.add(logIdStr);
-                return renderLogRow(log, isNew);
+                if (isNew) {
+                    knownLogIds.add(logIdStr);
+                    if (!isInitialLoad) {
+                        newlyArrivedCount++;
+                        showIncidentToast(log);
+                    }
+                }
+                return renderLogRow(log, isNew && !isInitialLoad);
             }).join('');
+
+            if (newlyArrivedCount > 0) {
+                playLiveAlertSound();
+                const scrollBox = document.getElementById('terminalScrollBox');
+                if (scrollBox) {
+                    scrollBox.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
 
             tbody.innerHTML = html;
             applyLogFilters();
@@ -680,13 +854,20 @@
                 refreshIcon.classList.add('spin-animation');
             }
 
-            const pollingStatusText = document.getElementById('pollingStatusText');
+            const streamBadge = document.getElementById('streamStatusBadge');
 
-            fetch('${pageContext.request.contextPath}/api/v1/logs?limit=100', {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+            const url = '${pageContext.request.contextPath}/api/v1/logs?limit=100&_t=' + Date.now();
+
+            fetch(url, {
+                signal: controller.signal,
                 headers: { 'Accept': 'application/json' },
                 cache: 'no-store'
             })
             .then(res => {
+                clearTimeout(timeoutId);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
             })
@@ -700,17 +881,20 @@
                         renderLogsTable(logs);
                     }
 
-                    if (pollingStatusText) {
-                        pollingStatusText.innerText = 'Live Feed Active';
-                        pollingStatusText.style.color = '#34d399';
+                    if (streamBadge) {
+                        streamBadge.innerText = 'LIVE STREAMING';
+                        streamBadge.style.color = '#34d399';
                     }
                 }
             })
             .catch(err => {
-                console.warn('Live log poll error:', err);
-                if (pollingStatusText) {
-                    pollingStatusText.innerText = 'Feed Reconnecting...';
-                    pollingStatusText.style.color = '#f59e0b';
+                clearTimeout(timeoutId);
+                if (err.name !== 'AbortError') {
+                    console.warn('Live log poll note:', err.message);
+                }
+                if (streamBadge) {
+                    streamBadge.innerText = 'RECONNECTING';
+                    streamBadge.style.color = '#f59e0b';
                 }
             })
             .finally(() => {
@@ -725,13 +909,16 @@
             fetchLiveLogs(true);
         }
 
-        // Auto Refresh via AJAX every 3 seconds - NO FULL PAGE RELOADS!
+        // Ultra-responsive Real-Time AJAX Stream polling every 1.5 seconds!
         let refreshInterval = setInterval(() => {
             const autoRefresh = document.getElementById('toggleAutoRefresh');
             if (autoRefresh && autoRefresh.checked) {
                 fetchLiveLogs(false);
             }
-        }, 3000);
+        }, 1500);
+
+        // Immediate first poll
+        setTimeout(() => { fetchLiveLogs(false); }, 1500);
     </script>
 
     <!-- Bootstrap JS -->
