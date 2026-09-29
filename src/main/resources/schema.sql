@@ -137,7 +137,9 @@ VALUES
 (8, NULL, 'EEXIST', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock', 1),
 (9, NULL, 'Too many open files', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
 (10, NULL, 'Defunct', 'CUSTOM_SCRIPT', 'pkill -9 -f defunct', 1),
-(11, NULL, 'Certificate Expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1);
+(11, NULL, 'Certificate Expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
+(12, NULL, 'ServerThreadFrozen', 'RESTART_SERVICE', 'npm restart', 1),
+(13, NULL, 'frozen', 'RESTART_SERVICE', 'npm restart', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES
