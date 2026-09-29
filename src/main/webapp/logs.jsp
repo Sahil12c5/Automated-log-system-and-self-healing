@@ -642,19 +642,19 @@
 
         // Real-Time Incident Toast Notification
         function showIncidentToast(log) {
-            const container = document.getElementById('liveToastContainer');
+            var container = document.getElementById('liveToastContainer');
             if (!container) return;
 
-            const toast = document.createElement('div');
+            var toast = document.createElement('div');
             toast.className = 'live-incident-toast p-3';
 
-            const level = (log.logLevel || 'INFO').toUpperCase();
-            const status = (log.status || 'PENDING').toUpperCase();
-            let levelBadgeClass = 'bg-info text-dark';
+            var level = (log.logLevel || 'INFO').toUpperCase();
+            var status = (log.status || 'PENDING').toUpperCase();
+            var levelBadgeClass = 'bg-info text-dark';
             if (level === 'CRITICAL' || level === 'ERROR') levelBadgeClass = 'bg-danger text-white';
             else if (level === 'WARN') levelBadgeClass = 'bg-warning text-dark';
 
-            let statusBadge = '';
+            var statusBadge = '';
             if (status === 'AUTO_HEALED') {
                 statusBadge = '<span class="badge" style="background:#064e3b; color:#34d399; border:1px solid #059669;"><i class="bi bi-check-all me-1"></i>AUTO_HEALED</span>';
             } else if (status === 'LOOP_DETECTED') {
@@ -662,49 +662,52 @@
             } else if (status === 'SECURITY_BLOCKED') {
                 statusBadge = '<span class="badge bg-danger text-white"><i class="bi bi-shield-x me-1"></i>BLOCKED</span>';
             } else {
-                statusBadge = `<span class="badge bg-warning text-dark">${escapeHtml(status)}</span>`;
+                statusBadge = '<span class="badge bg-warning text-dark">' + escapeHtml(status) + '</span>';
             }
 
-            const timeStr = formatLogTime(log.createdAt);
+            var timeStr = formatLogTime(log.createdAt);
 
-            toast.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge ${levelBadgeClass} fw-bold">${level}</span>
-                        <strong class="text-white small">${escapeHtml(log.domainName || 'Domain')}</strong>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white small ms-2" onclick="this.closest('.live-incident-toast').remove()"></button>
-                </div>
-                <div class="text-light font-monospace small text-truncate my-1" title="${escapeHtml(log.message || '')}">
-                    ${escapeHtml(log.message || '')}
-                </div>
-                <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-secondary border-opacity-25">
-                    <div>${statusBadge}</div>
-                    <small class="text-muted font-monospace" style="font-size:0.7rem;">${timeStr}</small>
-                </div>
-                ${log.executedAction ? `<div class="mt-1 small font-monospace text-success text-truncate" style="font-size:0.72rem;"><i class="bi bi-lightning-charge me-1"></i>${escapeHtml(log.executedAction)}</div>` : ''}
-            `;
+            var actionPill = '';
+            if (log.executedAction) {
+                actionPill = '<div class="mt-1 small font-monospace text-success text-truncate" style="font-size:0.72rem;"><i class="bi bi-lightning-charge me-1"></i>' + escapeHtml(log.executedAction) + '</div>';
+            }
+
+            toast.innerHTML = 
+                '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                    '<div class="d-flex align-items-center gap-2">' +
+                        '<span class="badge ' + levelBadgeClass + ' fw-bold">' + level + '</span>' +
+                        '<strong class="text-white small">' + escapeHtml(log.domainName || 'Domain') + '</strong>' +
+                    </div>' +
+                    '<button type="button" class="btn-close btn-close-white small ms-2" onclick="this.closest(\'.live-incident-toast\').remove()"></button>' +
+                '</div>' +
+                '<div class="text-light font-monospace small text-truncate my-1" title="' + escapeHtml(log.message || '') + '">' +
+                    escapeHtml(log.message || '') +
+                '</div>' +
+                '<div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-secondary border-opacity-25">' +
+                    '<div>' + statusBadge + '</div>' +
+                    '<small class="text-muted font-monospace" style="font-size:0.7rem;">' + timeStr + '</small>' +
+                '</div>' +
+                actionPill;
 
             container.prepend(toast);
 
-            // Auto-remove after 7 seconds
-            setTimeout(() => {
+            setTimeout(function() {
                 toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateX(50px)';
-                setTimeout(() => toast.remove(), 400);
+                setTimeout(function() { toast.remove(); }, 400);
             }, 7000);
         }
 
         // Track known log IDs to highlight brand new logs
-        const knownLogIds = new Set();
-        let isInitialLoad = true;
+        var knownLogIds = new Set();
+        var isInitialLoad = true;
 
-        document.querySelectorAll('#logsTableBody tr[data-id]').forEach(r => {
-            const id = r.getAttribute('data-id');
+        document.querySelectorAll('#logsTableBody tr[data-id]').forEach(function(r) {
+            var id = r.getAttribute('data-id');
             if (id) knownLogIds.add(String(id));
         });
-        setTimeout(() => { isInitialLoad = false; }, 800);
+        setTimeout(function() { isInitialLoad = false; }, 800);
 
         function escapeHtml(text) {
             if (!text) return '';
@@ -719,32 +722,33 @@
         function formatLogTime(dateVal) {
             if (!dateVal) return '';
             try {
-                const d = (typeof dateVal === 'number') ? new Date(dateVal) : new Date(String(dateVal));
+                var d = (typeof dateVal === 'number') ? new Date(dateVal) : new Date(String(dateVal));
                 if (isNaN(d.getTime())) return String(dateVal);
-                const pad = (n, s = 2) => String(n).padStart(s, '0');
-                const year = d.getFullYear();
-                const month = pad(d.getMonth() + 1);
-                const day = pad(d.getDate());
-                const hours = pad(d.getHours());
-                const minutes = pad(d.getMinutes());
-                const seconds = pad(d.getSeconds());
-                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                var pad = function(n, s) { if (!s) s = 2; return String(n).padStart(s, '0'); };
+                var year = d.getFullYear();
+                var month = pad(d.getMonth() + 1);
+                var day = pad(d.getDate());
+                var hours = pad(d.getHours());
+                var minutes = pad(d.getMinutes());
+                var seconds = pad(d.getSeconds());
+                return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
             } catch (e) {
                 return String(dateVal);
             }
         }
 
-        function renderLogRow(log, isNew = false) {
-            const timeFormatted = formatLogTime(log.createdAt);
-            const domain = escapeHtml(log.domainName || '');
-            const level = (log.logLevel || 'INFO').toUpperCase();
-            const status = (log.status || 'PENDING').toUpperCase();
-            const message = escapeHtml(log.message || '');
-            const rawMessage = log.message || '';
-            const rawTrace = log.stackTrace || '';
-            const executedAction = log.executedAction || '';
+        function renderLogRow(log, isNew) {
+            if (typeof isNew === 'undefined') isNew = false;
+            var timeFormatted = formatLogTime(log.createdAt);
+            var domain = escapeHtml(log.domainName || '');
+            var level = (log.logLevel || 'INFO').toUpperCase();
+            var status = (log.status || 'PENDING').toUpperCase();
+            var message = escapeHtml(log.message || '');
+            var rawMessage = log.message || '';
+            var rawTrace = log.stackTrace || '';
+            var executedAction = log.executedAction || '';
 
-            let levelBadge = '';
+            var levelBadge = '';
             if (level === 'CRITICAL') {
                 levelBadge = '<span class="badge bg-danger text-white fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i> CRITICAL</span>';
             } else if (level === 'ERROR') {
@@ -755,7 +759,7 @@
                 levelBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.35);"><i class="bi bi-info-circle-fill me-1"></i> INFO</span>';
             }
 
-            let statusBadge = '';
+            var statusBadge = '';
             if (status === 'AUTO_HEALED') {
                 statusBadge = '<span class="badge badge-status-active"><i class="bi bi-check-all me-1"></i> AUTO_HEALED</span>';
             } else if (status === 'PENDING') {
@@ -767,62 +771,55 @@
             } else if (status === 'AI_DIAGNOSED') {
                 statusBadge = '<span class="badge" style="background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35);"><i class="bi bi-robot me-1"></i> AI_DIAGNOSED</span>';
             } else {
-                statusBadge = `<span class="badge bg-secondary bg-opacity-25 text-main border border-secondary border-opacity-40">${escapeHtml(status)}</span>`;
+                statusBadge = '<span class="badge bg-secondary bg-opacity-25 text-main border border-secondary border-opacity-40">' + escapeHtml(status) + '</span>';
             }
 
-            let actionHtml = '';
+            var actionHtml = '';
             if (executedAction) {
-                actionHtml = `<code class="px-2 py-1 rounded font-monospace small" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);"><i class="bi bi-lightning-charge-fill me-1"></i> ${escapeHtml(executedAction)}</code>`;
+                actionHtml = '<code class="px-2 py-1 rounded font-monospace small" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);"><i class="bi bi-lightning-charge-fill me-1"></i> ' + escapeHtml(executedAction) + '</code>';
             }
 
-            let traceHtml = '';
+            var traceHtml = '';
             if (rawTrace) {
-                traceHtml = `<button type="button" class="btn btn-saas-outline btn-sm py-0.5 px-2 btn-view-trace" data-trace="${escapeHtml(rawTrace)}" data-msg="${escapeHtml(rawMessage)}"><i class="bi bi-code-square me-1"></i> Trace</button>`;
+                traceHtml = '<button type="button" class="btn btn-saas-outline btn-sm py-0.5 px-2 btn-view-trace" data-trace="' + escapeHtml(rawTrace) + '" data-msg="' + escapeHtml(rawMessage) + '"><i class="bi bi-code-square me-1"></i> Trace</button>';
             }
 
-            const newClass = isNew ? ' log-row-new' : '';
+            var newClass = isNew ? ' log-row-new' : '';
 
-            return `
-                <tr data-id="${log.id}" data-domain="${domain}" data-level="${level}" data-status="${status}" class="${newClass}">
-                    <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">${timeFormatted}</td>
-                    <td>
-                        <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
-                            ${domain}
-                        </span>
-                    </td>
-                    <td>${levelBadge}</td>
-                    <td class="font-monospace small text-wrap log-message-cell" style="max-width: 420px; color: #f8fafc !important;">${message}</td>
-                    <td>${statusBadge}</td>
-                    <td>${actionHtml}</td>
-                    <td class="text-end">${traceHtml}</td>
-                </tr>
-            `;
+            return '<tr data-id="' + log.id + '" data-domain="' + domain + '" data-level="' + level + '" data-status="' + status + '" class="' + newClass + '">' +
+                    '<td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">' + timeFormatted + '</td>' +
+                    '<td><span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">' + domain + '</span></td>' +
+                    '<td>' + levelBadge + '</td>' +
+                    '<td class="font-monospace small text-wrap log-message-cell" style="max-width: 420px; color: #f8fafc !important;">' + message + '</td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td>' + actionHtml + '</td>' +
+                    '<td class="text-end">' + traceHtml + '</td>' +
+                '</tr>';
         }
 
-        let isFetchingLogs = false;
-        let lastLogSignature = '';
+        var isFetchingLogs = false;
+        var lastLogSignature = '';
 
         function renderLogsTable(logs) {
-            const tbody = document.getElementById('logsTableBody');
+            var tbody = document.getElementById('logsTableBody');
             if (!tbody) return;
 
             if (!logs || logs.length === 0) {
-                tbody.innerHTML = `
-                    <tr id="noLogsRow">
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-terminal fs-1 d-block mb-2 text-secondary"></i>
-                            No log entries recorded yet. Click <strong>"Simulate Ingestion"</strong> to send a test event.
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = 
+                    '<tr id="noLogsRow">' +
+                        '<td colspan="7" class="text-center py-5 text-muted">' +
+                            '<i class="bi bi-terminal fs-1 d-block mb-2 text-secondary"></i>' +
+                            'No log entries recorded yet. Click <strong>"Simulate Ingestion"</strong> to send a test event.' +
+                        '</td>' +
+                    '</tr>';
                 applyLogFilters();
                 return;
             }
 
-            let newlyArrivedCount = 0;
-            const html = logs.map(log => {
-                const logIdStr = String(log.id);
-                const isNew = !knownLogIds.has(logIdStr);
+            var newlyArrivedCount = 0;
+            var html = logs.map(function(log) {
+                var logIdStr = String(log.id);
+                var isNew = !knownLogIds.has(logIdStr);
                 if (isNew) {
                     knownLogIds.add(logIdStr);
                     if (!isInitialLoad) {
@@ -835,7 +832,7 @@
 
             if (newlyArrivedCount > 0) {
                 playLiveAlertSound();
-                const scrollBox = document.getElementById('terminalScrollBox');
+                var scrollBox = document.getElementById('terminalScrollBox');
                 if (scrollBox) {
                     scrollBox.scrollTo({ top: 0, behavior: 'smooth' });
                 }
@@ -845,36 +842,37 @@
             applyLogFilters();
         }
 
-        function fetchLiveLogs(force = false) {
+        function fetchLiveLogs(force) {
+            if (typeof force === 'undefined') force = false;
             if (isFetchingLogs) return;
             isFetchingLogs = true;
 
-            const refreshIcon = document.getElementById('manualRefreshIcon');
+            var refreshIcon = document.getElementById('manualRefreshIcon');
             if (refreshIcon && force) {
                 refreshIcon.classList.add('spin-animation');
             }
 
-            const streamBadge = document.getElementById('streamStatusBadge');
+            var streamBadge = document.getElementById('streamStatusBadge');
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, 4000);
 
-            const url = '${pageContext.request.contextPath}/api/v1/logs?limit=100&_t=' + Date.now();
+            var url = '${pageContext.request.contextPath}/api/v1/logs?limit=100&_t=' + Date.now();
 
             fetch(url, {
                 signal: controller.signal,
                 headers: { 'Accept': 'application/json' },
                 cache: 'no-store'
             })
-            .then(res => {
+            .then(function(res) {
                 clearTimeout(timeoutId);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
             })
-            .then(data => {
+            .then(function(data) {
                 if (data && data.success && Array.isArray(data.data)) {
-                    const logs = data.data;
-                    const signature = logs.map(l => `${l.id}:${l.status}:${l.executedAction}`).join('|');
+                    var logs = data.data;
+                    var signature = logs.map(function(l) { return l.id + ':' + l.status + ':' + (l.executedAction || ''); }).join('|');
                     
                     if (force || signature !== lastLogSignature) {
                         lastLogSignature = signature;
@@ -887,7 +885,7 @@
                     }
                 }
             })
-            .catch(err => {
+            .catch(function(err) {
                 clearTimeout(timeoutId);
                 if (err.name !== 'AbortError') {
                     console.warn('Live log poll note:', err.message);
@@ -897,7 +895,7 @@
                     streamBadge.style.color = '#f59e0b';
                 }
             })
-            .finally(() => {
+            .finally(function() {
                 isFetchingLogs = false;
                 if (refreshIcon) {
                     refreshIcon.classList.remove('spin-animation');
@@ -910,15 +908,15 @@
         }
 
         // Ultra-responsive Real-Time AJAX Stream polling every 1.5 seconds!
-        let refreshInterval = setInterval(() => {
-            const autoRefresh = document.getElementById('toggleAutoRefresh');
+        var refreshInterval = setInterval(function() {
+            var autoRefresh = document.getElementById('toggleAutoRefresh');
             if (autoRefresh && autoRefresh.checked) {
                 fetchLiveLogs(false);
             }
         }, 1500);
 
         // Immediate first poll
-        setTimeout(() => { fetchLiveLogs(false); }, 1500);
+        setTimeout(function() { fetchLiveLogs(false); }, 1500);
     </script>
 
     <!-- Bootstrap JS -->
