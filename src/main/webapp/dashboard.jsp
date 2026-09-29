@@ -181,6 +181,9 @@
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control form-control-saas" id="tableSearchInput" placeholder="Filter domains...">
                     </div>
+                    <button type="button" class="btn btn-saas-outline" onclick="showDeploymentModal('${not empty domains ? domains[0].apiKey : ''}', '${not empty domains ? domains[0].domainName : 'All Domains'}')" title="Agent Deployment Guides">
+                        <i class="bi bi-book me-1 text-info"></i> Deployment Guide
+                    </button>
                     <button type="button" class="btn btn-saas-primary" data-bs-toggle="modal" data-bs-target="#addDomainModal">
                         <i class="bi bi-plus-lg"></i> Add New Domain
                     </button>
@@ -378,82 +381,445 @@
     <!-- Toast Notifications Container -->
     <div id="toastContainer"></div>
 
-    <!-- Modal: Quick Deployment Guide -->
+    <!-- Modal: Comprehensive Multi-Platform Deployment Guide -->
     <div class="modal fade" id="deploymentModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content modal-content-saas">
                 <div class="modal-header modal-header-saas">
-                    <h5 class="modal-title fw-bold">
-                        <i class="bi bi-rocket-takeoff text-primary me-2"></i> Quick Deployment Guide
-                    </h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="brand-icon-wrapper" style="width: 42px; height: 42px;">
+                            <i class="bi bi-rocket-takeoff-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Agent Deployment &amp; Cloud Integration Guide</h5>
+                            <span class="text-muted small">Step-by-step setup for Render, AWS, Hostinger, Vercel, Docker &amp; Linux servers</span>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
                 <div class="modal-body p-4">
-                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3 mb-4" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2);">
-                        <div>
-                            <h6 class="fw-bold mb-1">1. Download the Log Agent</h6>
-                            <span class="text-muted small">Get the standalone executable JAR file. Requires Java 17+.</span>
+                    <!-- Key Vault Banner -->
+                    <div class="p-3.5 rounded-3 mb-4" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25);">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-7">
+                                <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-weight: 600;">Target Domain</span>
+                                <h6 class="fw-bold text-main mt-1 mb-1" id="modalTargetDomain">Select a domain</h6>
+                                <p class="text-muted small mb-0">Every log sent with this API Key will be routed to your organization and auto-healed according to your rules.</p>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label-custom mb-1"><i class="bi bi-key-fill text-warning me-1"></i> Domain API Key (Inject into Server)</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="form-control form-control-saas font-monospace small" id="modalActiveApiKey" readonly>
+                                    <button class="btn btn-saas-primary btn-sm px-3" onclick="copySnippet('modalActiveApiKey', true)" title="Copy Key">
+                                        <i class="bi bi-clipboard"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <a href="${pageContext.request.contextPath}/download/agent" class="btn btn-saas-primary">
-                            <i class="bi bi-download me-1"></i> Download log-agent.jar
-                        </a>
                     </div>
-                    
-                    <h6 class="fw-bold mb-3">2. Start the Agent</h6>
-                    <p class="text-muted small mb-3">Run the agent alongside your application. Choose your hosting environment below.</p>
-                    
-                    <!-- Tabs for environments -->
-                    <ul class="nav nav-tabs mb-3 border-secondary border-opacity-30" id="deployTabs" role="tablist">
+
+                    <!-- Step 1: Download Jar -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-4" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <div class="mb-2 mb-md-0">
+                            <h6 class="fw-bold text-success mb-1"><i class="bi bi-download me-2"></i> Step 1: Get the Standalone Agent JAR</h6>
+                            <span class="text-muted small">Requires Java 17+. Lightweight, zero-config tailing daemon that detects errors and runs remediation commands.</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="${pageContext.request.contextPath}/download/agent" class="btn btn-success btn-sm px-3 py-1.5 fw-semibold">
+                                <i class="bi bi-cloud-arrow-down-fill me-1"></i> Download log-agent.jar
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Choose Platform Tabs -->
+                    <h6 class="fw-bold mb-3"><i class="bi bi-hdd-stack text-primary me-2"></i> Step 2: Deploy on Your Cloud Platform</h6>
+                    <ul class="nav nav-pills mb-3 gap-2" id="deployTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active fw-semibold text-main" id="linux-tab" data-bs-toggle="tab" data-bs-target="#linux-deploy" type="button" role="tab">Linux / VM</button>
+                            <button class="nav-link active fw-semibold" id="render-tab" data-bs-toggle="pill" data-bs-target="#tab-render" type="button" role="tab">
+                                <i class="bi bi-cloud-arrow-up me-1 text-primary"></i> Render
+                            </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-semibold text-main" id="render-tab" data-bs-toggle="tab" data-bs-target="#render-deploy" type="button" role="tab">Render / PaaS</button>
+                            <button class="nav-link fw-semibold" id="aws-tab" data-bs-toggle="pill" data-bs-target="#tab-aws" type="button" role="tab">
+                                <i class="bi bi-boxes me-1 text-warning"></i> AWS (EC2 / Beanstalk)
+                            </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-semibold text-main" id="docker-tab" data-bs-toggle="tab" data-bs-target="#docker-deploy" type="button" role="tab">Docker</button>
+                            <button class="nav-link fw-semibold" id="hostinger-tab" data-bs-toggle="pill" data-bs-target="#tab-hostinger" type="button" role="tab">
+                                <i class="bi bi-hdd-network me-1 text-info"></i> Hostinger (VPS)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="vercel-tab" data-bs-toggle="pill" data-bs-target="#tab-vercel" type="button" role="tab">
+                                <i class="bi bi-triangle-fill me-1 text-white"></i> Vercel (Next.js)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="docker-tab" data-bs-toggle="pill" data-bs-target="#tab-docker" type="button" role="tab">
+                                <i class="bi bi-box-seam me-1 text-info"></i> Docker
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="linux-tab" data-bs-toggle="pill" data-bs-target="#tab-linux" type="button" role="tab">
+                                <i class="bi bi-terminal me-1 text-success"></i> Linux / VM (CLI)
+                            </button>
                         </li>
                     </ul>
-                    
-                    <div class="tab-content" id="deployTabsContent">
-                        <!-- Linux / VM Tab -->
-                        <div class="tab-pane fade show active" id="linux-deploy" role="tabpanel">
-                            <div class="position-relative">
-                                <pre class="bg-dark text-info p-3 rounded-3 small overflow-auto font-monospace"><code id="linuxCommand">nohup java -jar log-agent.jar --api-key="YOUR_API_KEY" --log-file="/var/log/app.log" --server-url="http://${pageContext.request.serverName}:${pageContext.request.serverPort}${pageContext.request.contextPath}/api/v1/logs/ingest" > /dev/null 2>&1 &</code></pre>
-                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copyToClipboard('linuxCommand')"><i class="bi bi-clipboard"></i> Copy</button>
+
+                    <div class="tab-content saas-card p-4" id="deployTabsContent">
+                        <!-- ==================== RENDER TAB ==================== -->
+                        <div class="tab-pane fade show active" id="tab-render" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc;">Platform: Render.com Web Service / Worker</span>
+                            </div>
+
+                            <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 text-main small p-3 mb-3">
+                                <strong><i class="bi bi-info-circle-fill me-1"></i> Where to add the API Key on Render:</strong><br>
+                                Open your <strong>Render Dashboard</strong> &rarr; Select your Web Service &rarr; Click <strong>Environment</strong> in the left sidebar &rarr; Click <strong>Add Environment Variable</strong>:<br>
+                                <span class="font-monospace text-warning">AUTOHEAL_API_KEY</span> = <span class="font-monospace text-success modal-key-placeholder">YOUR_API_KEY</span>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Option A: Node.js / Python / Go App (Running via Start Command)</h6>
+                            <p class="text-muted small mb-2">1. In your Render <strong>Build Command</strong>, add the download command:</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="renderBuildCmd">npm install && curl -sLO <HOST_URL>/download/agent -o log-agent.jar</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('renderBuildCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <p class="text-muted small mb-2">2. In your Render <strong>Start Command</strong>, start the agent alongside your app (pipe output to <code>app.log</code>):</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="renderStartCmd">java -jar log-agent.jar --api-key="$AUTOHEAL_API_KEY" --log-file="app.log" --server-url="<SERVER_URL>" & npm start</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('renderStartCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <div class="p-2.5 rounded-2 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 text-muted small">
+                                <i class="bi bi-check-circle-fill text-success me-1"></i> <strong>Automatic Recovery on Render:</strong> When an unhandled error writes to <code>app.log</code>, the agent intercepts it, notifies AutoHeal, and executes the configured restart command.
                             </div>
                         </div>
-                        <!-- Render / PaaS Tab -->
-                        <div class="tab-pane fade" id="render-deploy" role="tabpanel">
-                            <div class="position-relative">
-                                <pre class="bg-dark text-info p-3 rounded-3 small overflow-auto font-monospace"><code id="renderCommand">java -jar log-agent.jar --api-key="YOUR_API_KEY" --log-file="app.log" --server-url="http://${pageContext.request.serverName}:${pageContext.request.serverPort}${pageContext.request.contextPath}/api/v1/logs/ingest" & <YOUR_ORIGINAL_START_COMMAND></code></pre>
-                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copyToClipboard('renderCommand')"><i class="bi bi-clipboard"></i> Copy</button>
+
+                        <!-- ==================== AWS TAB ==================== -->
+                        <div class="tab-pane fade" id="tab-aws" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Platform: AWS EC2 / Elastic Beanstalk / Linux VM</span>
+                            </div>
+
+                            <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 text-main small p-3 mb-3">
+                                <strong><i class="bi bi-info-circle-fill me-1"></i> Where to add the API Key on AWS:</strong><br>
+                                - <strong>EC2:</strong> Pass via CLI flag <code>--api-key="KEY"</code> or add to <code>/etc/environment</code>.<br>
+                                - <strong>Elastic Beanstalk:</strong> Add in <strong>Configuration</strong> &rarr; <strong>Software</strong> &rarr; <strong>Environment properties</strong>: <code>AUTOHEAL_API_KEY</code>.
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 1: Install Java 17 on EC2 (if needed)</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code>sudo apt update && sudo apt install -y openjdk-17-jre-headless</code></pre>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 2: Download the Agent to your app directory</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="awsDownloadCmd">sudo mkdir -p /opt/autoheal && cd /opt/autoheal
+sudo curl -sLO <HOST_URL>/download/agent -o log-agent.jar</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('awsDownloadCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 3: Run as a Persistent Systemd Service (Auto-starts on server reboot)</h6>
+                            <p class="text-muted small mb-2">Create service file at <code>/etc/systemd/system/autoheal-agent.service</code>:</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="awsSystemdCode">[Unit]
+Description=AutoHeal Autonomous Log Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/autoheal
+ExecStart=/usr/bin/java -jar /opt/autoheal/log-agent.jar --api-key="<API_KEY>" --log-file="/var/log/app.log" --server-url="<SERVER_URL>"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('awsSystemdCode')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <p class="text-muted small mb-2">Enable and start the service:</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code>sudo systemctl daemon-reload && sudo systemctl enable --now autoheal-agent</code></pre>
                             </div>
                         </div>
-                        <!-- Docker Tab -->
-                        <div class="tab-pane fade" id="docker-deploy" role="tabpanel">
-                            <div class="position-relative">
-                                <pre class="bg-dark text-info p-3 rounded-3 small overflow-auto font-monospace"><code id="dockerCommand">CMD java -jar log-agent.jar --api-key=$API_KEY --log-file=/app/app.log --server-url=http://${pageContext.request.serverName}:${pageContext.request.serverPort}${pageContext.request.contextPath}/api/v1/logs/ingest & java -jar main-app.jar</code></pre>
-                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copyToClipboard('dockerCommand')"><i class="bi bi-clipboard"></i> Copy</button>
+
+                        <!-- ==================== HOSTINGER TAB ==================== -->
+                        <div class="tab-pane fade" id="tab-hostinger" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #38bdf8;">Platform: Hostinger VPS &amp; Cloud Hosting</span>
+                            </div>
+
+                            <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 text-main small p-3 mb-3">
+                                <strong><i class="bi bi-info-circle-fill me-1"></i> Where to add the API Key on Hostinger:</strong><br>
+                                Connect to your Hostinger VPS via SSH or Hostinger Web Console. Pass the API key directly in the startup command or inside your PM2 process configuration.
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 1: SSH into Hostinger VPS</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code>ssh root@YOUR_HOSTINGER_VPS_IP</code></pre>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 2: Download Agent into Your App Directory</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="hostingerDownloadCmd">cd /var/www/your-app && curl -sLO <HOST_URL>/download/agent -o log-agent.jar</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('hostingerDownloadCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Step 3: Run via PM2 (Standard on Hostinger Node/Web Apps)</h6>
+                            <p class="text-muted small mb-2">PM2 keeps the agent running in the background and restarts it automatically if the server restarts:</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="hostingerPm2Cmd">pm2 start "java -jar log-agent.jar --api-key='<API_KEY>' --log-file='app.log' --server-url='<SERVER_URL>'" --name "autoheal-agent"
+pm2 save
+pm2 startup</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('hostingerPm2Cmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+                        </div>
+
+                        <!-- ==================== VERCEL TAB ==================== -->
+                        <div class="tab-pane fade" id="tab-vercel" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(255, 255, 255, 0.2); color: #ffffff;">Platform: Vercel (Next.js / Node.js Serverless)</span>
+                            </div>
+
+                            <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 text-main small p-3 mb-3">
+                                <strong><i class="bi bi-info-circle-fill me-1"></i> Where to add the API Key on Vercel:</strong><br>
+                                Open your <strong>Vercel Dashboard</strong> &rarr; Select Project &rarr; <strong>Settings</strong> &rarr; <strong>Environment Variables</strong> &rarr; Add:<br>
+                                <span class="font-monospace text-warning">AUTOHEAL_API_KEY</span> = <span class="font-monospace text-success modal-key-placeholder">YOUR_API_KEY</span>
+                            </div>
+
+                            <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 text-main small p-3 mb-3">
+                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> <strong>Note for Serverless Lambdas:</strong><br>
+                                Vercel functions are ephemeral and run in micro-lambdas (no persistent background JVM). You send error logs directly to the AutoHeal Ingestion API via HTTP fetch inside your error handler or Next.js instrumentation!
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Next.js / Express Error Middleware Integration</h6>
+                            <p class="text-muted small mb-2">Add this helper to your Next.js API handler, Express <code>app.use(errorHandler)</code>, or <code>instrumentation.ts</code>:</p>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="vercelCodeSnippet">// lib/autoheal.js
+export async function sendErrorToAutoHeal(error, req = null) {
+  try {
+    await fetch('<SERVER_URL>', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': process.env.AUTOHEAL_API_KEY || '<API_KEY>'
+      },
+      body: JSON.stringify({
+        logLevel: 'ERROR',
+        message: error.message || String(error),
+        stackTrace: error.stack || null,
+        timestamp: Date.now()
+      })
+    });
+  } catch (err) {
+    console.error('Failed to notify AutoHeal:', err);
+  }
+}</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('vercelCodeSnippet')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+                        </div>
+
+                        <!-- ==================== DOCKER TAB ==================== -->
+                        <div class="tab-pane fade" id="tab-docker" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8;">Platform: Docker &amp; Docker Compose</span>
+                            </div>
+
+                            <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 text-main small p-3 mb-3">
+                                <strong><i class="bi bi-info-circle-fill me-1"></i> Where to add the API Key in Docker:</strong><br>
+                                In your <code>.env</code> file or passed as environment variable <code>-e AUTOHEAL_API_KEY="KEY"</code>.
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Option A: Run Agent Container Sharing a Log Volume</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="dockerRunCmd">docker run -d --name autoheal-agent \
+  --restart unless-stopped \
+  -v /var/log/app:/app/logs \
+  -e AUTOHEAL_API_KEY="<API_KEY>" \
+  openjdk:17-slim \
+  sh -c "curl -sLO <HOST_URL>/download/agent -o /log-agent.jar && java -jar /log-agent.jar --api-key=\"$AUTOHEAL_API_KEY\" --log-file=\"/app/logs/app.log\" --server-url=\"<SERVER_URL>\""</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('dockerRunCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Option B: In your existing Dockerfile Entrypoint</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="dockerfileCmd"># Download agent in Dockerfile:
+RUN curl -sLO <HOST_URL>/download/agent -o /app/log-agent.jar
+
+# Run agent in background before starting your main application:
+CMD java -jar /app/log-agent.jar --api-key="$AUTOHEAL_API_KEY" --log-file="/app/logs/app.log" --server-url="<SERVER_URL>" & npm start</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('dockerfileCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+                        </div>
+
+                        <!-- ==================== LINUX / CLI TAB ==================== -->
+                        <div class="tab-pane fade" id="tab-linux" role="tabpanel">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Platform: Linux / Terminal / VM Direct CLI</span>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Quick One-Liner (Foreground with console logging)</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="linuxForegroundCmd">java -jar log-agent.jar --api-key="<API_KEY>" --log-file="/path/to/app.log" --server-url="<SERVER_URL>"</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('linuxForegroundCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Background Execution with Nohup</h6>
+                            <div class="position-relative mb-3">
+                                <pre class="p-3 rounded-3 font-monospace small bg-dark text-info overflow-auto"><code id="linuxNohupCmd">nohup java -jar log-agent.jar --api-key="<API_KEY>" --log-file="/path/to/app.log" --server-url="<SERVER_URL>" > autoheal-agent.out 2>&1 &</code></pre>
+                                <button class="btn btn-sm btn-saas-outline position-absolute top-0 end-0 m-2" onclick="copySnippet('linuxNohupCmd')"><i class="bi bi-clipboard"></i> Copy</button>
+                            </div>
+
+                            <h6 class="fw-bold small text-uppercase text-muted mt-3 mb-2">Parameters Reference</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-saas small mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Flag</th>
+                                            <th>Required</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>--api-key="&lt;KEY&gt;"</code></td>
+                                            <td><span class="badge bg-danger">Yes</span></td>
+                                            <td>Domain API Key generated in AutoHeal dashboard.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>--log-file="&lt;PATH&gt;"</code></td>
+                                            <td><span class="badge bg-danger">Yes</span></td>
+                                            <td>Absolute or relative path to the log file your application writes to.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>--server-url="&lt;URL&gt;"</code></td>
+                                            <td><span class="badge bg-secondary">Optional</span></td>
+                                            <td>AutoHeal endpoint (Default: <code>/api/v1/logs/ingest</code>).</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>--poll-interval=&lt;MS&gt;</code></td>
+                                            <td><span class="badge bg-secondary">Optional</span></td>
+                                            <td>File tail check interval in milliseconds (Default: 1000ms).</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="modal-footer modal-footer-saas">
+                    <button type="button" class="btn btn-saas-outline" data-bs-dismiss="modal">Close</button>
+                    <a href="${pageContext.request.contextPath}/logs" class="btn btn-saas-primary">
+                        <i class="bi bi-terminal me-1"></i> Open Live Logs Console
+                    </a>
                 </div>
             </div>
         </div>
     </div>
     
     <script>
+        function copySnippet(elementId, isInput = false) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const text = isInput ? el.value : (el.innerText || el.textContent);
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Copied to clipboard!', 'success');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Copied to clipboard!', 'success');
+            } catch (err) {
+                showToast('Unable to copy', 'danger');
+            }
+            document.body.removeChild(textArea);
+        }
+
         function showDeploymentModal(apiKey, domainName) {
             const hostUrl = window.location.origin + '${pageContext.request.contextPath}';
-            const linuxCode = document.getElementById('linuxCommand');
-            const renderCode = document.getElementById('renderCommand');
-            const dockerCode = document.getElementById('dockerCommand');
-            
-            if (linuxCode) linuxCode.innerText = `nohup java -jar log-agent.jar --api-key="` + apiKey + `" --log-file="/var/log/app.log" --server-url="` + hostUrl + `/api/v1/logs/ingest" > /dev/null 2>&1 &`;
-            if (renderCode) renderCode.innerText = `java -jar log-agent.jar --api-key="` + apiKey + `" --log-file="app.log" --server-url="` + hostUrl + `/api/v1/logs/ingest" & <YOUR_ORIGINAL_START_COMMAND>`;
-            if (dockerCode) dockerCode.innerText = `CMD java -jar log-agent.jar --api-key="` + apiKey + `" --log-file=/app/app.log --server-url=` + hostUrl + `/api/v1/logs/ingest & java -jar main-app.jar`;
-            
+            const ingestUrl = hostUrl + '/api/v1/logs/ingest';
+            const effectiveKey = (apiKey && apiKey.trim().length > 0) ? apiKey : 'YOUR_API_KEY';
+            const effectiveDomain = (domainName && domainName.trim().length > 0) ? domainName : 'General Configuration';
+
+            // Update Domain badge & input
+            const domainEl = document.getElementById('modalTargetDomain');
+            if (domainEl) domainEl.innerText = effectiveDomain;
+
+            const keyInput = document.getElementById('modalActiveApiKey');
+            if (keyInput) keyInput.value = effectiveKey;
+
+            document.querySelectorAll('.modal-key-placeholder').forEach(el => {
+                el.innerText = effectiveKey;
+            });
+
+            // Update Render commands
+            const renderBuild = document.getElementById('renderBuildCmd');
+            if (renderBuild) renderBuild.innerText = `npm install && curl -sLO ` + hostUrl + `/download/agent -o log-agent.jar`;
+
+            const renderStart = document.getElementById('renderStartCmd');
+            if (renderStart) renderStart.innerText = `java -jar log-agent.jar --api-key="$AUTOHEAL_API_KEY" --log-file="app.log" --server-url="` + ingestUrl + `" & npm start`;
+
+            // Update AWS commands
+            const awsDl = document.getElementById('awsDownloadCmd');
+            if (awsDl) awsDl.innerText = `sudo mkdir -p /opt/autoheal && cd /opt/autoheal\nsudo curl -sLO ` + hostUrl + `/download/agent -o log-agent.jar`;
+
+            const awsSystemd = document.getElementById('awsSystemdCode');
+            if (awsSystemd) {
+                awsSystemd.innerText = `[Unit]\nDescription=AutoHeal Autonomous Log Agent\nAfter=network.target\n\n[Service]\nType=simple\nUser=root\nWorkingDirectory=/opt/autoheal\nExecStart=/usr/bin/java -jar /opt/autoheal/log-agent.jar --api-key="` + effectiveKey + `" --log-file="/var/log/app.log" --server-url="` + ingestUrl + `"\nRestart=always\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target`;
+            }
+
+            // Update Hostinger commands
+            const hostingerDl = document.getElementById('hostingerDownloadCmd');
+            if (hostingerDl) hostingerDl.innerText = `cd /var/www/your-app && curl -sLO ` + hostUrl + `/download/agent -o log-agent.jar`;
+
+            const hostingerPm2 = document.getElementById('hostingerPm2Cmd');
+            if (hostingerPm2) hostingerPm2.innerText = `pm2 start "java -jar log-agent.jar --api-key='` + effectiveKey + `' --log-file='app.log' --server-url='` + ingestUrl + `'" --name "autoheal-agent"\npm2 save\npm2 startup`;
+
+            // Update Vercel code snippet
+            const vercelSnippet = document.getElementById('vercelCodeSnippet');
+            if (vercelSnippet) {
+                vercelSnippet.innerText = `// lib/autoheal.js\nexport async function sendErrorToAutoHeal(error, req = null) {\n  try {\n    await fetch('` + ingestUrl + `', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-API-KEY': process.env.AUTOHEAL_API_KEY || '` + effectiveKey + `'\n      },\n      body: JSON.stringify({\n        logLevel: 'ERROR',\n        message: error.message || String(error),\n        stackTrace: error.stack || null,\n        timestamp: Date.now()\n      })\n    });\n  } catch (err) {\n    console.error('Failed to notify AutoHeal:', err);\n  }\n}`;
+            }
+
+            // Update Docker commands
+            const dockerRun = document.getElementById('dockerRunCmd');
+            if (dockerRun) {
+                dockerRun.innerText = `docker run -d --name autoheal-agent \\\n  --restart unless-stopped \\\n  -v /var/log/app:/app/logs \\\n  -e AUTOHEAL_API_KEY="` + effectiveKey + `" \\\n  openjdk:17-slim \\\n  sh -c "curl -sLO ` + hostUrl + `/download/agent -o /log-agent.jar && java -jar /log-agent.jar --api-key=\\"$AUTOHEAL_API_KEY\\" --log-file=\\"/app/logs/app.log\\" --server-url=\\"` + ingestUrl + `\\""`;
+            }
+
+            const dockerfile = document.getElementById('dockerfileCmd');
+            if (dockerfile) {
+                dockerfile.innerText = `# Download agent in Dockerfile:\nRUN curl -sLO ` + hostUrl + `/download/agent -o /app/log-agent.jar\n\n# Run agent in background before starting your main application:\nCMD java -jar /app/log-agent.jar --api-key="$AUTOHEAL_API_KEY" --log-file="/app/logs/app.log" --server-url="` + ingestUrl + `" & npm start`;
+            }
+
+            // Update Linux commands
+            const linuxFg = document.getElementById('linuxForegroundCmd');
+            if (linuxFg) linuxFg.innerText = `java -jar log-agent.jar --api-key="` + effectiveKey + `" --log-file="/path/to/app.log" --server-url="` + ingestUrl + `"`;
+
+            const linuxNohup = document.getElementById('linuxNohupCmd');
+            if (linuxNohup) linuxNohup.innerText = `nohup java -jar log-agent.jar --api-key="` + effectiveKey + `" --log-file="/path/to/app.log" --server-url="` + ingestUrl + `" > autoheal-agent.out 2>&1 &`;
+
             const modal = new bootstrap.Modal(document.getElementById('deploymentModal'));
             modal.show();
         }
