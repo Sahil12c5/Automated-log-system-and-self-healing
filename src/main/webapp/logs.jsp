@@ -13,6 +13,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Theme CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/theme.css" rel="stylesheet">
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .spin-animation { display: inline-block; animation: spin 0.75s linear infinite; }
+        .log-row-new { animation: logRowHighlight 2.5s ease-out; }
+        @keyframes logRowHighlight {
+            0% { background-color: rgba(99, 102, 241, 0.25); }
+            100% { background-color: transparent; }
+        }
+    </style>
 </head>
 <body>
 
@@ -182,8 +191,8 @@
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-muted small font-monospace" id="logCountDisplay">Showing ${logs.size()} entries</span>
-                    <button class="btn btn-sm btn-saas-outline py-0 px-2" onclick="window.location.reload()" title="Refresh Now">
-                        <i class="bi bi-arrow-clockwise"></i>
+                    <button class="btn btn-sm btn-saas-outline py-0 px-2" onclick="refreshLogsManually()" id="btnManualRefresh" title="Refresh Live Logs">
+                        <i class="bi bi-arrow-clockwise" id="manualRefreshIcon"></i>
                     </button>
                 </div>
             </div>
@@ -205,7 +214,7 @@
                         <c:choose>
                             <c:when test="${not empty logs}">
                                 <c:forEach var="log" items="${logs}">
-                                    <tr data-domain="<c:out value="${log.domainName}" />" data-level="${log.logLevel}" data-status="${log.status}">
+                                    <tr data-id="${log.id}" data-domain="<c:out value="${log.domainName}" />" data-level="${log.logLevel}" data-status="${log.status}">
                                         <td class="font-monospace small text-muted text-nowrap">
                                             <fmt:formatDate value="${log.createdAt}" pattern="HH:mm:ss.SSS" />
                                         </td>
@@ -456,7 +465,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Ingesting...';
 
-            fetch('api/v1/logs/ingest', {
+            fetch('${pageContext.request.contextPath}/api/v1/logs/ingest', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -478,7 +487,10 @@
                     const modalElem = document.getElementById('testIngestModal');
                     const modal = bootstrap.Modal.getInstance(modalElem);
                     if (modal) modal.hide();
-                    setTimeout(() => window.location.reload(), 900);
+                    document.getElementById('simLogMessage').value = '';
+                    document.getElementById('simStackTrace').value = '';
+                    // Fetch live logs immediately without full page reload!
+                    fetchLiveLogs(true);
                 } else {
                     showToast(data.message || 'Ingestion rejected', 'danger');
                 }
@@ -490,12 +502,190 @@
             });
         });
 
-        // Auto Refresh
+        // Track known log IDs to highlight brand new logs
+        const knownLogIds = new Set();
+        document.querySelectorAll('#logsTableBody tr[data-id]').forEach(r => {
+            const id = r.getAttribute('data-id');
+            if (id) knownLogIds.add(id);
+        });
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatLogTime(dateVal) {
+            if (!dateVal) return '';
+            try {
+                const d = (typeof dateVal === 'number') ? new Date(dateVal) : new Date(String(dateVal));
+                if (isNaN(d.getTime())) return String(dateVal);
+                const pad = (n, s = 2) => String(n).padStart(s, '0');
+                return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+            } catch (e) {
+                return String(dateVal);
+            }
+        }
+
+        function renderLogRow(log, isNew = false) {
+            const timeFormatted = formatLogTime(log.createdAt);
+            const domain = escapeHtml(log.domainName || '');
+            const level = (log.logLevel || 'INFO').toUpperCase();
+            const status = (log.status || 'PENDING').toUpperCase();
+            const message = escapeHtml(log.message || '');
+            const rawMessage = log.message || '';
+            const rawTrace = log.stackTrace || '';
+            const executedAction = log.executedAction || '';
+
+            let levelBadge = '';
+            if (level === 'CRITICAL') {
+                levelBadge = '<span class="badge bg-danger text-white fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i> CRITICAL</span>';
+            } else if (level === 'ERROR') {
+                levelBadge = '<span class="badge" style="background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35);"><i class="bi bi-x-circle-fill me-1"></i> ERROR</span>';
+            } else if (level === 'WARN') {
+                levelBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);"><i class="bi bi-exclamation-triangle-fill me-1"></i> WARN</span>';
+            } else {
+                levelBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.35);"><i class="bi bi-info-circle-fill me-1"></i> INFO</span>';
+            }
+
+            let statusBadge = '';
+            if (status === 'AUTO_HEALED') {
+                statusBadge = '<span class="badge badge-status-active"><i class="bi bi-check-all me-1"></i> AUTO_HEALED</span>';
+            } else if (status === 'PENDING') {
+                statusBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);"><i class="bi bi-hourglass-split me-1"></i> PENDING</span>';
+            } else if (status === 'LOOP_DETECTED') {
+                statusBadge = '<span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-40"><i class="bi bi-shield-slash me-1"></i> LOOP_DETECTED</span>';
+            } else if (status === 'SECURITY_BLOCKED') {
+                statusBadge = '<span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-40"><i class="bi bi-shield-x me-1"></i> BLOCKED</span>';
+            } else if (status === 'AI_DIAGNOSED') {
+                statusBadge = '<span class="badge" style="background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35);"><i class="bi bi-robot me-1"></i> AI_DIAGNOSED</span>';
+            } else {
+                statusBadge = `<span class="badge bg-secondary bg-opacity-25 text-main border border-secondary border-opacity-40">${escapeHtml(status)}</span>`;
+            }
+
+            let actionHtml = '';
+            if (executedAction) {
+                actionHtml = `<code class="px-2 py-1 rounded font-monospace small" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);"><i class="bi bi-lightning-charge-fill me-1"></i> ${escapeHtml(executedAction)}</code>`;
+            }
+
+            let traceHtml = '';
+            if (rawTrace) {
+                traceHtml = `<button type="button" class="btn btn-saas-outline btn-sm py-0.5 px-2 btn-view-trace" data-trace="${escapeHtml(rawTrace)}" data-msg="${escapeHtml(rawMessage)}"><i class="bi bi-code-square me-1"></i> Trace</button>`;
+            }
+
+            const newClass = isNew ? ' log-row-new' : '';
+
+            return `
+                <tr data-id="${log.id}" data-domain="${domain}" data-level="${level}" data-status="${status}" class="${newClass}">
+                    <td class="font-monospace small text-muted text-nowrap">${timeFormatted}</td>
+                    <td>
+                        <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
+                            ${domain}
+                        </span>
+                    </td>
+                    <td>${levelBadge}</td>
+                    <td class="font-monospace small text-wrap" style="max-width: 420px; color: var(--text-main);">${message}</td>
+                    <td>${statusBadge}</td>
+                    <td>${actionHtml}</td>
+                    <td class="text-end">${traceHtml}</td>
+                </tr>
+            `;
+        }
+
+        let isFetchingLogs = false;
+        let lastLogSignature = '';
+
+        function renderLogsTable(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            if (!tbody) return;
+
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="noLogsRow">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-terminal fs-1 d-block mb-2 text-secondary"></i>
+                            No log entries recorded yet. Click <strong>"Simulate Ingestion"</strong> to send a test event.
+                        </td>
+                    </tr>
+                `;
+                applyLogFilters();
+                return;
+            }
+
+            const html = logs.map(log => {
+                const logIdStr = String(log.id);
+                const isNew = !knownLogIds.has(logIdStr);
+                if (isNew) knownLogIds.add(logIdStr);
+                return renderLogRow(log, isNew);
+            }).join('');
+
+            tbody.innerHTML = html;
+            applyLogFilters();
+        }
+
+        function fetchLiveLogs(force = false) {
+            if (isFetchingLogs) return;
+            isFetchingLogs = true;
+
+            const refreshIcon = document.getElementById('manualRefreshIcon');
+            if (refreshIcon && force) {
+                refreshIcon.classList.add('spin-animation');
+            }
+
+            const pollingStatusText = document.getElementById('pollingStatusText');
+
+            fetch('${pageContext.request.contextPath}/api/v1/logs?limit=100', {
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data && data.success && Array.isArray(data.data)) {
+                    const logs = data.data;
+                    const signature = logs.map(l => `${l.id}:${l.status}:${l.executedAction}`).join('|');
+                    
+                    if (force || signature !== lastLogSignature) {
+                        lastLogSignature = signature;
+                        renderLogsTable(logs);
+                    }
+
+                    if (pollingStatusText) {
+                        pollingStatusText.innerText = 'Live Feed Active';
+                        pollingStatusText.style.color = '#34d399';
+                    }
+                }
+            })
+            .catch(err => {
+                console.warn('Live log poll error:', err);
+                if (pollingStatusText) {
+                    pollingStatusText.innerText = 'Feed Reconnecting...';
+                    pollingStatusText.style.color = '#f59e0b';
+                }
+            })
+            .finally(() => {
+                isFetchingLogs = false;
+                if (refreshIcon) {
+                    refreshIcon.classList.remove('spin-animation');
+                }
+            });
+        }
+
+        function refreshLogsManually() {
+            fetchLiveLogs(true);
+        }
+
+        // Auto Refresh via AJAX every 3 seconds - NO FULL PAGE RELOADS!
         let refreshInterval = setInterval(() => {
             const autoRefresh = document.getElementById('toggleAutoRefresh');
             if (autoRefresh && autoRefresh.checked) {
-                // Smoothly reload logs
-                window.location.reload();
+                fetchLiveLogs(false);
             }
         }, 3000);
     </script>
