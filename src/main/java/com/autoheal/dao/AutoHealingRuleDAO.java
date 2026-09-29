@@ -48,10 +48,11 @@ public class AutoHealingRuleDAO {
 
     public List<AutoHealingRule> findByOrganizationId(Long organizationId) throws SQLException {
         List<AutoHealingRule> rules = new ArrayList<>();
-        String sql = "SELECT r.id, r.domain_id, d.domain_name, r.error_pattern, r.action_type, r.target_script, r.is_active, r.created_at " +
+        String sql = "SELECT r.id, r.domain_id, COALESCE(d.domain_name, 'Global (All Domains)') AS domain_name, " +
+                     "r.error_pattern, r.action_type, r.target_script, r.is_active, r.created_at " +
                      "FROM auto_healing_rules r " +
-                     "JOIN domains d ON r.domain_id = d.id " +
-                     "WHERE d.organization_id = ? ORDER BY r.id DESC";
+                     "LEFT JOIN domains d ON r.domain_id = d.id " +
+                     "WHERE (d.organization_id = ? OR r.domain_id IS NULL) ORDER BY r.id DESC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, organizationId);
@@ -67,10 +68,8 @@ public class AutoHealingRuleDAO {
     }
 
     public boolean toggleRuleActive(Long ruleId, Long organizationId, boolean isActive) throws SQLException {
-        String sql = "UPDATE auto_healing_rules r " +
-                     "JOIN domains d ON r.domain_id = d.id " +
-                     "SET r.is_active = ? " +
-                     "WHERE r.id = ? AND d.organization_id = ?";
+        String sql = "UPDATE auto_healing_rules SET is_active = ? " +
+                     "WHERE id = ? AND (domain_id IS NULL OR domain_id IN (SELECT id FROM domains WHERE organization_id = ?))";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setBoolean(1, isActive);
@@ -81,9 +80,8 @@ public class AutoHealingRuleDAO {
     }
 
     public boolean deleteRule(Long ruleId, Long organizationId) throws SQLException {
-        String sql = "DELETE r FROM auto_healing_rules r " +
-                     "JOIN domains d ON r.domain_id = d.id " +
-                     "WHERE r.id = ? AND d.organization_id = ?";
+        String sql = "DELETE FROM auto_healing_rules " +
+                     "WHERE id = ? AND (domain_id IS NULL OR domain_id IN (SELECT id FROM domains WHERE organization_id = ?))";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, ruleId);
@@ -93,7 +91,8 @@ public class AutoHealingRuleDAO {
     }
 
     private AutoHealingRule extractRuleFromResultSet(ResultSet rs) throws SQLException {
-        Long domainId = (Long) rs.getObject("domain_id");
+        Object domainIdObj = rs.getObject("domain_id");
+        Long domainId = domainIdObj != null ? ((Number) domainIdObj).longValue() : null;
         return new AutoHealingRule(
             rs.getLong("id"),
             domainId,

@@ -132,14 +132,19 @@ VALUES
 (3, NULL, 'RedisCacheException', 'CLEAR_CACHE', 'scripts/flush-redis-cache.sh', 1),
 (4, NULL, 'freeze', 'RESTART_SERVICE', 'npm restart', 1),
 (5, NULL, 'cpu lag', 'RESTART_SERVICE', 'pm2 restart app', 1),
-(6, NULL, 'No space left on device', 'CUSTOM_SCRIPT', 'cleanup-storage.sh', 1),
+(6, NULL, 'No space left on device', 'CUSTOM_SCRIPT', 'sh scripts/clear-disk-cache.sh', 1),
 (7, NULL, '502 Bad Gateway', 'RESTART_SERVICE', 'pm2 restart backend-worker', 1),
-(8, NULL, 'EEXIST', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock', 1),
+(8, NULL, 'EEXIST', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock /var/run/*.pid', 1),
 (9, NULL, 'Too many open files', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
 (10, NULL, 'Defunct', 'CUSTOM_SCRIPT', 'pkill -9 -f defunct', 1),
 (11, NULL, 'Certificate Expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
 (12, NULL, 'ServerThreadFrozen', 'RESTART_SERVICE', 'npm restart', 1),
-(13, NULL, 'frozen', 'RESTART_SERVICE', 'npm restart', 1);
+(13, NULL, 'frozen', 'RESTART_SERVICE', 'npm restart', 1),
+(14, NULL, 'ENOSPC', 'CUSTOM_SCRIPT', 'sh scripts/clear-disk-cache.sh', 1),
+(15, NULL, 'STORAGE_CRITICAL', 'CUSTOM_SCRIPT', 'sh scripts/clear-disk-cache.sh', 1),
+(16, NULL, 'EMFILE', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
+(17, NULL, 'OS_RESOURCE_LIMIT', 'CUSTOM_SCRIPT', 'ulimit -n 65535 && pm2 reload all', 1),
+(18, NULL, 'FILESYSTEM_CONFLICT', 'CUSTOM_SCRIPT', 'rm -f /tmp/*.lock /var/run/*.pid', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES

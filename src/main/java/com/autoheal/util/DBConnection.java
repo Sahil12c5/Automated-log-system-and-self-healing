@@ -44,6 +44,13 @@ public class DBConnection {
             dataSource = new HikariDataSource(config);
             initException = null;
             LOGGER.info("HikariCP Connection Pool initialized successfully.");
+
+            // Bootstrap missing standard self-healing rules into database
+            try {
+                DatabaseBootstrap.bootstrap(dataSource);
+            } catch (Exception be) {
+                LOGGER.warning("Non-fatal error during DatabaseBootstrap: " + be.getMessage());
+            }
         } catch (Exception e) {
             initException = e;
             LOGGER.severe("Failed to initialize HikariCP DataSource: " + e.getMessage());
