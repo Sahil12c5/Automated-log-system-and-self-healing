@@ -99,8 +99,8 @@ CREATE TABLE `logs` (
     `log_level` ENUM('INFO', 'WARN', 'ERROR', 'CRITICAL') NOT NULL,
     `message` TEXT NOT NULL,
     `stack_trace` TEXT NULL,
-    `status` ENUM('PENDING', 'AUTO_HEALED', 'AI_DIAGNOSED', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
-    `executed_action` VARCHAR(255) NULL,
+    `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    `executed_action` TEXT NULL,
     `ai_root_cause` TEXT NULL,
     `ai_remediation_suggestion` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -149,7 +149,10 @@ VALUES
 (20, NULL, 'certificate has expired', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
 (21, NULL, 'TLSError', 'CUSTOM_SCRIPT', 'certbot renew && systemctl reload nginx', 1),
 (22, NULL, 'ProcessZombieException', 'CUSTOM_SCRIPT', 'pkill -9 -f defunct', 1),
-(23, NULL, 'GATEWAY_ERROR', 'RESTART_SERVICE', 'pm2 restart backend-worker', 1);
+(23, NULL, 'GATEWAY_ERROR', 'RESTART_SERVICE', 'pm2 restart backend-worker', 1),
+(24, NULL, 'CPUStarvationException', 'RESTART_SERVICE', 'pm2 restart app', 1),
+(25, NULL, 'CPU computation', 'RESTART_SERVICE', 'pm2 restart app'),
+(26, NULL, 'ServerFreezeException', 'RESTART_SERVICE', 'npm restart', 1);
 
 INSERT INTO `logs` (`id`, `domain_id`, `log_level`, `message`, `stack_trace`, `status`, `executed_action`, `created_at`)
 VALUES

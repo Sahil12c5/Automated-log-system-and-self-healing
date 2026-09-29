@@ -39,12 +39,19 @@ public class DatabaseBootstrap {
         // 4. Server freeze / deadlock
         {"freeze", "RESTART_SERVICE", "npm restart"},
         {"ServerThreadFrozen", "RESTART_SERVICE", "npm restart"},
+        {"ServerFreezeException", "RESTART_SERVICE", "npm restart"},
         {"frozen", "RESTART_SERVICE", "npm restart"},
         {"ERR_EVENT_LOOP_DEADLOCK", "RESTART_SERVICE", "npm restart"},
+        {"execution loop deadlock", "RESTART_SERVICE", "npm restart"},
 
-        // 5. CPU lag / Event loop blocked
+        // 5. CPU lag / Event loop blocked / CPU starvation
         {"cpu lag", "RESTART_SERVICE", "pm2 restart app"},
         {"EventLoopBlocked", "RESTART_SERVICE", "pm2 restart app"},
+        {"CPUStarvationException", "RESTART_SERVICE", "pm2 restart app"},
+        {"CPUStarvation", "RESTART_SERVICE", "pm2 restart app"},
+        {"CPU computation", "RESTART_SERVICE", "pm2 restart app"},
+        {"blocking event loop", "RESTART_SERVICE", "pm2 restart app"},
+        {"CPU starved", "RESTART_SERVICE", "pm2 restart app"},
         {"ERR_CPU_STARVATION", "RESTART_SERVICE", "pm2 restart app"},
         {"COMPUTE_SPIKE", "RESTART_SERVICE", "pm2 restart app"},
 
@@ -104,7 +111,21 @@ public class DatabaseBootstrap {
                 LOGGER.fine("[DatabaseBootstrap] Alter table note: " + e.getMessage());
             }
 
-            // 2. Query existing error patterns (lowercase for case-insensitive comparison)
+            // 2. Ensure logs table status column supports all states (LOOP_DETECTED, SECURITY_BLOCKED, etc.) without truncation
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE logs MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'PENDING'");
+            } catch (Exception e) {
+                LOGGER.fine("[DatabaseBootstrap] Alter logs status note: " + e.getMessage());
+            }
+
+            // 3. Ensure executed_action column can store detailed guardrail notes
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE logs MODIFY COLUMN executed_action TEXT NULL");
+            } catch (Exception e) {
+                LOGGER.fine("[DatabaseBootstrap] Alter logs executed_action note: " + e.getMessage());
+            }
+
+            // 4. Query existing error patterns (lowercase for case-insensitive comparison)
             Set<String> existingPatterns = new HashSet<>();
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery("SELECT LOWER(error_pattern) FROM auto_healing_rules")) {
