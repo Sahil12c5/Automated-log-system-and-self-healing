@@ -142,7 +142,7 @@
                     <tbody>
                         <c:forEach var="audit" items="${auditLogs}">
                             <tr>
-                                <td class="text-nowrap text-muted font-monospace small">${audit.createdAt}</td>
+                                <td class="text-nowrap text-muted font-monospace small local-time-cell" data-raw-time="${audit.createdAt.time}">${audit.createdAt}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <c:choose>

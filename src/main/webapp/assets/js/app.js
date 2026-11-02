@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDomainForm();
     initFormValidation();
     initQuickSearchFilters();
+    initLocalTimeConversion();
 });
 
 /**
@@ -445,4 +446,84 @@ function initFormValidation() {
             form.classList.add('was-validated');
         }, false);
     });
+}
+
+/**
+ * IP-Based Local Time Conversion for Any Element with .local-time-cell or [data-raw-time]
+ */
+function initLocalTimeConversion() {
+    var detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    function formatCell(cell, tz) {
+        var raw = cell.getAttribute('data-raw-time');
+        if (!raw) return;
+        var d;
+        if (/^\d+$/.test(raw.trim())) {
+            d = new Date(Number(raw.trim()));
+        } else {
+            var s = raw.trim();
+            if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(s)) {
+                s = s.replace(' ', 'T') + 'Z';
+            }
+            d = new Date(s);
+        }
+        if (isNaN(d.getTime())) return;
+
+        try {
+            var formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: tz,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            var parts = formatter.formatToParts(d);
+            var m = {};
+            parts.forEach(function(p) { m[p.type] = p.value; });
+
+            var tzName = '';
+            try {
+                var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+                    .formatToParts(d).find(function(p) { return p.type === 'timeZoneName'; });
+                if (tzPart && tzPart.value) {
+                    tzName = ' ' + tzPart.value;
+                }
+            } catch (e) {}
+
+            cell.innerText = m.year + '-' + m.month + '-' + m.day + ' ' + m.hour + ':' + m.minute + ':' + m.second + tzName;
+        } catch(e) {}
+    }
+
+    // Apply immediate local device time
+    document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
+        formatCell(c, detectedTz); 
+    });
+
+    // Enhance with IP Geolocation API
+    fetch('https://ipapi.co/json/', { cache: 'force-cache' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.timezone) {
+                detectedTz = data.timezone;
+                document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
+                    formatCell(c, detectedTz); 
+                });
+            }
+        })
+        .catch(function() {
+            fetch('https://ipwho.is/')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.success && data.timezone && data.timezone.id) {
+                        detectedTz = data.timezone.id;
+                        document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
+                            formatCell(c, detectedTz); 
+                        });
+                    }
+                })
+                .catch(function() {});
+        });
 }

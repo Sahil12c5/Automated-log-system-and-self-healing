@@ -283,7 +283,11 @@
                     <span class="terminal-dot dot-green"></span>
                     <span class="terminal-title ms-2"><i class="bi bi-terminal me-1"></i> autoheal-log-stream.log</span>
                 </div>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.28);" id="userIpLocationBadge" title="Local time zone detected via IP location">
+                        <i class="bi bi-geo-alt-fill text-danger" style="font-size: 0.72rem;"></i>
+                        <span class="font-monospace small" id="userIpLocationText" style="font-size: 0.72rem; color: #38bdf8;">Detecting IP Location...</span>
+                    </div>
                     <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-pill" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);">
                         <span class="pulse-dot"></span>
                         <span class="font-monospace small fw-bold" id="streamStatusBadge" style="font-size: 0.72rem; color: #34d399;">LIVE STREAMING</span>
@@ -316,7 +320,7 @@
                             <c:when test="${not empty logs}">
                                 <c:forEach var="log" items="${logs}">
                                     <tr data-id="${log.id}" data-domain="<c:out value="${log.domainName}" />" data-level="${log.logLevel}" data-status="${log.status}">
-                                        <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">
+                                        <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;" data-raw-time="${log.createdAt.time}">
                                             <fmt:formatDate value="${log.createdAt}" pattern="yyyy-MM-dd HH:mm:ss" />
                                         </td>
                                         <td>
@@ -719,22 +723,148 @@
                 .replace(/'/g, '&#039;');
         }
 
+        // ==========================================
+        // IP-BASED LOCAL TIMEZONE DETECTION & FORMATTING
+        // ==========================================
+        var userDetectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        var userLocationInfo = 'Local Device Time';
+
+        function updateIpLocationBadge(locationText, tzName) {
+            var badge = document.getElementById('userIpLocationText');
+            if (badge) {
+                badge.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i>' + 
+                    escapeHtml(locationText) + ' <span class="text-white-50">(' + escapeHtml(tzName) + ')</span>';
+            }
+        }
+
+        // Fetch user location and timezone via IP geolocation API
+        function detectIpLocationAndTimezone() {
+            // 1. Immediately show device local timezone without any delay
+            try {
+                var initialTzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
+                    .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
+                var shortTz = initialTzPart ? initialTzPart.value : userDetectedTimeZone;
+                updateIpLocationBadge(userDetectedTimeZone.replace(/_/g, ' '), shortTz);
+                reformatExistingLogTimes();
+            } catch (e) {}
+
+            // 2. Query IP Geolocation API to detect public IP location and accurate IANA timezone
+            fetch('https://ipapi.co/json/', { cache: 'force-cache' })
+                .then(function(res) {
+                    if (!res.ok) throw new Error('ipapi status: ' + res.status);
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (data && (data.timezone || data.country_name || data.city)) {
+                        if (data.timezone) {
+                            userDetectedTimeZone = data.timezone;
+                        }
+                        var city = data.city || '';
+                        var country = data.country_name || data.country || '';
+                        var locationStr = city ? (city + ', ' + country) : (country || userDetectedTimeZone);
+
+                        var shortTz = '';
+                        try {
+                            var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
+                                .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
+                            shortTz = tzPart ? tzPart.value : (data.utc_offset || '');
+                        } catch (e) {
+                            shortTz = data.utc_offset || '';
+                        }
+
+                        userLocationInfo = locationStr;
+                        updateIpLocationBadge(locationStr, (shortTz ? shortTz + ' • ' : '') + userDetectedTimeZone);
+                        reformatExistingLogTimes();
+                    }
+                })
+                .catch(function() {
+                    // Fallback to secondary IP geolocation service (ipwho.is)
+                    fetch('https://ipwho.is/')
+                        .then(function(res) { return res.json(); })
+                        .then(function(data) {
+                            if (data && data.success && data.timezone && data.timezone.id) {
+                                userDetectedTimeZone = data.timezone.id;
+                                var locationStr = (data.city ? data.city + ', ' : '') + (data.country || '');
+                                var shortTz = data.timezone.abbr || data.timezone.utc || '';
+                                userLocationInfo = locationStr;
+                                updateIpLocationBadge(locationStr, (shortTz ? shortTz + ' • ' : '') + userDetectedTimeZone);
+                                reformatExistingLogTimes();
+                            }
+                        })
+                        .catch(function() {
+                            // Offline or blocked: clean fallback to browser local timezone
+                            var shortTz = '';
+                            try {
+                                var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
+                                    .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
+                                shortTz = tzPart ? tzPart.value : '';
+                            } catch (e) {}
+                            updateIpLocationBadge(userDetectedTimeZone.replace(/_/g, ' '), shortTz || 'Local Device');
+                        });
+                });
+        }
+
         function formatLogTime(dateVal) {
             if (!dateVal) return '';
             try {
-                var d = (typeof dateVal === 'number') ? new Date(dateVal) : new Date(String(dateVal));
+                var d;
+                if (typeof dateVal === 'number') {
+                    d = new Date(dateVal);
+                } else if (typeof dateVal === 'string') {
+                    var s = dateVal.trim();
+                    // If string is SQL format like "2026-11-02 16:41:00" without timezone offset, treat as UTC
+                    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(s)) {
+                        s = s.replace(' ', 'T') + 'Z';
+                    }
+                    d = new Date(s);
+                } else {
+                    d = new Date(dateVal);
+                }
+
                 if (isNaN(d.getTime())) return String(dateVal);
-                var pad = function(n, s) { if (!s) s = 2; return String(n).padStart(s, '0'); };
-                var year = d.getFullYear();
-                var month = pad(d.getMonth() + 1);
-                var day = pad(d.getDate());
-                var hours = pad(d.getHours());
-                var minutes = pad(d.getMinutes());
-                var seconds = pad(d.getSeconds());
-                return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+
+                var tz = userDetectedTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+                var formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: tz,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                var parts = formatter.formatToParts(d);
+                var map = {};
+                for (var i = 0; i < parts.length; i++) {
+                    map[parts[i].type] = parts[i].value;
+                }
+
+                var tzAbbr = '';
+                try {
+                    var tzFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' });
+                    var tzPart = tzFmt.formatToParts(d).find(function(p) { return p.type === 'timeZoneName'; });
+                    if (tzPart && tzPart.value) {
+                        tzAbbr = ' ' + tzPart.value;
+                    }
+                } catch (e) {}
+
+                return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute + ':' + map.second + tzAbbr;
             } catch (e) {
                 return String(dateVal);
             }
+        }
+
+        function reformatExistingLogTimes() {
+            document.querySelectorAll('#logsTableBody td.log-timestamp-cell').forEach(function(cell) {
+                var raw = cell.getAttribute('data-raw-time');
+                if (raw) {
+                    var parsed = isNaN(Number(raw)) ? raw : Number(raw);
+                    cell.innerText = formatLogTime(parsed);
+                }
+            });
         }
 
         function renderLogRow(log, isNew) {
@@ -785,9 +915,10 @@
             }
 
             var newClass = isNew ? ' log-row-new' : '';
+            var rawTimeAttr = (typeof log.createdAt === 'number') ? log.createdAt : escapeHtml(log.createdAt || '');
 
             return '<tr data-id="' + log.id + '" data-domain="' + domain + '" data-level="' + level + '" data-status="' + status + '" class="' + newClass + '">' +
-                    '<td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;">' + timeFormatted + '</td>' +
+                    '<td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;" data-raw-time="' + rawTimeAttr + '">' + timeFormatted + '</td>' +
                     '<td><span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">' + domain + '</span></td>' +
                     '<td>' + levelBadge + '</td>' +
                     '<td class="font-monospace small text-wrap log-message-cell" style="max-width: 420px; color: #f8fafc !important;">' + message + '</td>' +
@@ -906,6 +1037,9 @@
         function refreshLogsManually() {
             fetchLiveLogs(true);
         }
+
+        // Immediate initialization: Detect IP location and reformat existing logs
+        detectIpLocationAndTimezone();
 
         // Ultra-responsive Real-Time AJAX Stream polling every 1.5 seconds!
         var refreshInterval = setInterval(function() {

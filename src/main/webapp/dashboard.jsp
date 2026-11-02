@@ -307,7 +307,7 @@
                                             </span>
                                         </td>
                                         <td class="small"><c:out value="${log.details}" /></td>
-                                        <td class="text-muted small">
+                                        <td class="text-muted small local-time-cell" data-raw-time="${log.createdAt.time}">
                                             <fmt:formatDate value="${log.createdAt}" pattern="MMM dd, yyyy HH:mm:ss" />
                                         </td>
                                     </tr>
