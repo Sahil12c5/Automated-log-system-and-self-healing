@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* Default Theme: Modern Dark Observability */
-:root {
+:root, [data-theme="dark"], html[data-theme="dark"] body, [data-bs-theme="dark"] {
     --bg-body: #0a0e17;
     --bg-surface: #111827;
     --bg-card: rgba(17, 24, 39, 0.78);
@@ -14,6 +14,11 @@
     --bg-input: rgba(15, 23, 42, 0.7);
     --bg-terminal: #070a10;
     --bg-dropdown: #111827;
+
+    --bs-body-bg: #0a0e17;
+    --bs-body-color: #f8fafc;
+    --bs-tertiary-bg: #111827;
+    --bs-border-color: rgba(255, 255, 255, 0.08);
 
     --border-color: rgba(255, 255, 255, 0.08);
     --border-subtle: rgba(255, 255, 255, 0.05);
@@ -71,7 +76,7 @@
 }
 
 /* Light Mode Overrides */
-[data-theme="light"], html[data-theme="light"] body {
+[data-theme="light"], html[data-theme="light"] body, [data-bs-theme="light"] {
     --bg-body: #f8fafc;
     --bg-surface: #f1f5f9;
     --bg-card: rgba(255, 255, 255, 0.95);
@@ -79,6 +84,11 @@
     --bg-input: #ffffff;
     --bg-terminal: #0f172a;
     --bg-dropdown: #ffffff;
+
+    --bs-body-bg: #f8fafc;
+    --bs-body-color: #0f172a;
+    --bs-tertiary-bg: #f1f5f9;
+    --bs-border-color: #e2e8f0;
 
     --border-color: #e2e8f0;
     --border-subtle: #edf2f7;
@@ -149,6 +159,54 @@ h1, h2, h3, h4, h5, h6 {
 
 p, span, div, td, th, li {
     letter-spacing: -0.01em;
+}
+
+/* Bootstrap 5 Native Component Dual-Theme Synchronizers */
+[data-theme="dark"] .card,
+[data-bs-theme="dark"] .card {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .modal-content {
+    background-color: var(--bg-surface);
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .table,
+[data-bs-theme="dark"] .table {
+    --bs-table-color: var(--text-main);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus,
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    background-color: var(--bg-input);
+    border-color: var(--primary-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .input-group-text,
+[data-bs-theme="dark"] .input-group-text {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 /* Custom Scrollbars */

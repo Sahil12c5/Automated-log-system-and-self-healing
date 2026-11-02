@@ -13,6 +13,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Theme CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/theme.css" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('autoheal_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
 </head>
 <body>
 

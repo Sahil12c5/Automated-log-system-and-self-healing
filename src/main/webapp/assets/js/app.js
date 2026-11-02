@@ -36,6 +36,11 @@ function initTheme() {
 
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    if (document.body) {
+        document.body.setAttribute('data-theme', theme);
+        document.body.setAttribute('data-bs-theme', theme);
+    }
     document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
         if (theme === 'dark') {
             btn.innerHTML = '<i class="bi bi-sun-fill text-warning"></i>';
