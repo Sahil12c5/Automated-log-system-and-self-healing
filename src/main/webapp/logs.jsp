@@ -284,9 +284,9 @@
                     <span class="terminal-title ms-2"><i class="bi bi-terminal me-1"></i> autoheal-log-stream.log</span>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <div class="d-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.28);" id="userIpLocationBadge" title="Local time zone detected via IP location">
-                        <i class="bi bi-geo-alt-fill text-danger" style="font-size: 0.72rem;"></i>
-                        <span class="font-monospace small" id="userIpLocationText" style="font-size: 0.72rem; color: #38bdf8;">Detecting IP Location...</span>
+                    <div class="d-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35);" id="userIpLocationBadge" title="Indian Standard Time (IST - UTC+05:30)">
+                        <i class="bi bi-clock-fill text-warning" style="font-size: 0.72rem;"></i>
+                        <span class="font-monospace small fw-semibold" id="userIpLocationText" style="font-size: 0.72rem; color: #fbbf24;">Indian Standard Time (IST &bull; UTC+05:30)</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-pill" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);">
                         <span class="pulse-dot"></span>
@@ -321,7 +321,9 @@
                                 <c:forEach var="log" items="${logs}">
                                     <tr data-id="${log.id}" data-domain="<c:out value="${log.domainName}" />" data-level="${log.logLevel}" data-status="${log.status}">
                                         <td class="font-monospace small text-nowrap log-timestamp-cell" style="color: #94a3b8 !important;" data-raw-time="${log.createdAt.time}">
-                                            <fmt:formatDate value="${log.createdAt}" pattern="yyyy-MM-dd HH:mm:ss" />
+                                            <fmt:timeZone value="Asia/Kolkata">
+                                                <fmt:formatDate value="${log.createdAt}" pattern="yyyy-MM-dd HH:mm:ss" /> IST
+                                            </fmt:timeZone>
                                         </td>
                                         <td>
                                             <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3);">
@@ -724,85 +726,9 @@
         }
 
         // ==========================================
-        // IP-BASED LOCAL TIMEZONE DETECTION & FORMATTING
+        // INDIAN STANDARD TIME (IST - Asia/Kolkata) FORMATTING
         // ==========================================
-        var userDetectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-        var userLocationInfo = 'Local Device Time';
-
-        function updateIpLocationBadge(locationText, tzName) {
-            var badge = document.getElementById('userIpLocationText');
-            if (badge) {
-                badge.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i>' + 
-                    escapeHtml(locationText) + ' <span class="text-white-50">(' + escapeHtml(tzName) + ')</span>';
-            }
-        }
-
-        // Fetch user location and timezone via IP geolocation API
-        function detectIpLocationAndTimezone() {
-            // 1. Immediately show device local timezone without any delay
-            try {
-                var initialTzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
-                    .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
-                var shortTz = initialTzPart ? initialTzPart.value : userDetectedTimeZone;
-                updateIpLocationBadge(userDetectedTimeZone.replace(/_/g, ' '), shortTz);
-                reformatExistingLogTimes();
-            } catch (e) {}
-
-            // 2. Query IP Geolocation API to detect public IP location and accurate IANA timezone
-            fetch('https://ipapi.co/json/', { cache: 'force-cache' })
-                .then(function(res) {
-                    if (!res.ok) throw new Error('ipapi status: ' + res.status);
-                    return res.json();
-                })
-                .then(function(data) {
-                    if (data && (data.timezone || data.country_name || data.city)) {
-                        if (data.timezone) {
-                            userDetectedTimeZone = data.timezone;
-                        }
-                        var city = data.city || '';
-                        var country = data.country_name || data.country || '';
-                        var locationStr = city ? (city + ', ' + country) : (country || userDetectedTimeZone);
-
-                        var shortTz = '';
-                        try {
-                            var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
-                                .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
-                            shortTz = tzPart ? tzPart.value : (data.utc_offset || '');
-                        } catch (e) {
-                            shortTz = data.utc_offset || '';
-                        }
-
-                        userLocationInfo = locationStr;
-                        updateIpLocationBadge(locationStr, (shortTz ? shortTz + ' • ' : '') + userDetectedTimeZone);
-                        reformatExistingLogTimes();
-                    }
-                })
-                .catch(function() {
-                    // Fallback to secondary IP geolocation service (ipwho.is)
-                    fetch('https://ipwho.is/')
-                        .then(function(res) { return res.json(); })
-                        .then(function(data) {
-                            if (data && data.success && data.timezone && data.timezone.id) {
-                                userDetectedTimeZone = data.timezone.id;
-                                var locationStr = (data.city ? data.city + ', ' : '') + (data.country || '');
-                                var shortTz = data.timezone.abbr || data.timezone.utc || '';
-                                userLocationInfo = locationStr;
-                                updateIpLocationBadge(locationStr, (shortTz ? shortTz + ' • ' : '') + userDetectedTimeZone);
-                                reformatExistingLogTimes();
-                            }
-                        })
-                        .catch(function() {
-                            // Offline or blocked: clean fallback to browser local timezone
-                            var shortTz = '';
-                            try {
-                                var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: userDetectedTimeZone, timeZoneName: 'short' })
-                                    .formatToParts(new Date()).find(function(p) { return p.type === 'timeZoneName'; });
-                                shortTz = tzPart ? tzPart.value : '';
-                            } catch (e) {}
-                            updateIpLocationBadge(userDetectedTimeZone.replace(/_/g, ' '), shortTz || 'Local Device');
-                        });
-                });
-        }
+        const IST_TIMEZONE = 'Asia/Kolkata';
 
         function formatLogTime(dateVal) {
             if (!dateVal) return '';
@@ -823,10 +749,8 @@
 
                 if (isNaN(d.getTime())) return String(dateVal);
 
-                var tz = userDetectedTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
                 var formatter = new Intl.DateTimeFormat('en-CA', {
-                    timeZone: tz,
+                    timeZone: IST_TIMEZONE,
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -842,16 +766,7 @@
                     map[parts[i].type] = parts[i].value;
                 }
 
-                var tzAbbr = '';
-                try {
-                    var tzFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' });
-                    var tzPart = tzFmt.formatToParts(d).find(function(p) { return p.type === 'timeZoneName'; });
-                    if (tzPart && tzPart.value) {
-                        tzAbbr = ' ' + tzPart.value;
-                    }
-                } catch (e) {}
-
-                return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute + ':' + map.second + tzAbbr;
+                return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute + ':' + map.second + ' IST';
             } catch (e) {
                 return String(dateVal);
             }
@@ -1038,8 +953,8 @@
             fetchLiveLogs(true);
         }
 
-        // Immediate initialization: Detect IP location and reformat existing logs
-        detectIpLocationAndTimezone();
+        // Immediate initialization: Reformat all existing logs in Indian Standard Time (IST)
+        reformatExistingLogTimes();
 
         // Ultra-responsive Real-Time AJAX Stream polling every 1.5 seconds!
         var refreshInterval = setInterval(function() {

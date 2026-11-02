@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,8 +128,10 @@
                                 </span>
                                 <span class="text-muted small font-monospace">#LOG-${log.id}</span>
                             </div>
-                            <div class="text-muted small">
-                                <i class="bi bi-clock me-1"></i> ${log.timestamp}
+                            <div class="text-muted small local-time-cell" data-raw-time="${log.createdAt.time}">
+                                <fmt:timeZone value="Asia/Kolkata">
+                                    <i class="bi bi-clock me-1"></i> <fmt:formatDate value="${log.createdAt}" pattern="yyyy-MM-dd HH:mm:ss" /> IST
+                                </fmt:timeZone>
                             </div>
                         </div>
                         

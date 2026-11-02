@@ -836,8 +836,8 @@ if (fileLength < lastPosition) {
 </div>
 
 <div class="qa-box">
-    <div class="qa-q">Q17: How does the system handle time zone differences for live streaming logs across global cloud servers and local operators?</div>
-    <div class="qa-a"><strong>Answer:</strong> Server and agent logs are recorded in UTC / epoch milliseconds in MySQL to preserve an absolute single source of truth regardless of server geographical location. When displayed on the web console, the frontend performs asynchronous IP Geolocation (via IP lookup API with fallback to <code>Intl.DateTimeFormat</code>) to detect the operator's exact local time zone (e.g., <code>Asia/Kolkata</code>, IST). Both initial and real-time streaming timestamps are dynamically localized in the browser, showing accurate local time alongside timezone indicators.</div>
+    <div class="qa-q">Q17: How does the system handle time zone differences for live streaming logs across global cloud servers?</div>
+    <div class="qa-a"><strong>Answer:</strong> Server and agent logs are stored in UTC / epoch milliseconds in MySQL to preserve an absolute single source of truth regardless of server geographical location. When displayed on the web console and dashboards, the platform standardizes and dynamically localizes all log timestamps to <strong>Indian Standard Time (IST &bull; Asia/Kolkata &bull; UTC+05:30)</strong> using JSTL <code>&lt;fmt:timeZone value="Asia/Kolkata"&gt;</code> and JavaScript's <code>Intl.DateTimeFormat</code> with target timezone <code>Asia/Kolkata</code>. This guarantees consistent, precise operational timestamps for all live streams and incident alerts.</div>
 </div>
 
 <!-- SECTION 7: LIVE VIVA DEMONSTRATION GUIDE -->

@@ -233,8 +233,10 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <td class="text-muted small">
-                                            <fmt:formatDate value="${dom.createdAt}" pattern="MMM dd, yyyy HH:mm" />
+                                        <td class="text-muted small local-time-cell" data-raw-time="${dom.createdAt.time}">
+                                            <fmt:timeZone value="Asia/Kolkata">
+                                                <fmt:formatDate value="${dom.createdAt}" pattern="MMM dd, yyyy HH:mm" /> IST
+                                            </fmt:timeZone>
                                         </td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
@@ -308,7 +310,9 @@
                                         </td>
                                         <td class="small"><c:out value="${log.details}" /></td>
                                         <td class="text-muted small local-time-cell" data-raw-time="${log.createdAt.time}">
-                                            <fmt:formatDate value="${log.createdAt}" pattern="MMM dd, yyyy HH:mm:ss" />
+                                            <fmt:timeZone value="Asia/Kolkata">
+                                                <fmt:formatDate value="${log.createdAt}" pattern="MMM dd, yyyy HH:mm:ss" /> IST
+                                            </fmt:timeZone>
                                         </td>
                                     </tr>
                                 </c:forEach>

@@ -449,12 +449,12 @@ function initFormValidation() {
 }
 
 /**
- * IP-Based Local Time Conversion for Any Element with .local-time-cell or [data-raw-time]
+ * Indian Standard Time (IST - Asia/Kolkata) Conversion for Any Element with .local-time-cell or [data-raw-time]
  */
 function initLocalTimeConversion() {
-    var detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const IST_TZ = 'Asia/Kolkata';
 
-    function formatCell(cell, tz) {
+    function formatCell(cell) {
         var raw = cell.getAttribute('data-raw-time');
         if (!raw) return;
         var d;
@@ -471,7 +471,7 @@ function initLocalTimeConversion() {
 
         try {
             var formatter = new Intl.DateTimeFormat('en-CA', {
-                timeZone: tz,
+                timeZone: IST_TZ,
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -484,46 +484,12 @@ function initLocalTimeConversion() {
             var m = {};
             parts.forEach(function(p) { m[p.type] = p.value; });
 
-            var tzName = '';
-            try {
-                var tzPart = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
-                    .formatToParts(d).find(function(p) { return p.type === 'timeZoneName'; });
-                if (tzPart && tzPart.value) {
-                    tzName = ' ' + tzPart.value;
-                }
-            } catch (e) {}
-
-            cell.innerText = m.year + '-' + m.month + '-' + m.day + ' ' + m.hour + ':' + m.minute + ':' + m.second + tzName;
+            cell.innerText = m.year + '-' + m.month + '-' + m.day + ' ' + m.hour + ':' + m.minute + ':' + m.second + ' IST';
         } catch(e) {}
     }
 
-    // Apply immediate local device time
+    // Apply Indian Standard Time formatting
     document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
-        formatCell(c, detectedTz); 
+        formatCell(c); 
     });
-
-    // Enhance with IP Geolocation API
-    fetch('https://ipapi.co/json/', { cache: 'force-cache' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data && data.timezone) {
-                detectedTz = data.timezone;
-                document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
-                    formatCell(c, detectedTz); 
-                });
-            }
-        })
-        .catch(function() {
-            fetch('https://ipwho.is/')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data && data.success && data.timezone && data.timezone.id) {
-                        detectedTz = data.timezone.id;
-                        document.querySelectorAll('.local-time-cell, [data-raw-time]').forEach(function(c) { 
-                            formatCell(c, detectedTz); 
-                        });
-                    }
-                })
-                .catch(function() {});
-        });
 }
